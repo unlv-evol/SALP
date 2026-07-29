@@ -82,6 +82,20 @@ demonstrate — it caps Readiness at Low regardless of Coverage and Fidelity.
 - Evidence output must be deterministic. Sort on a total key: a tie broken by
   iteration order has already caused a reproducibility bug here once.
 
+## Filing issues
+
+Issue forms live in `.github/ISSUE_TEMPLATE/`, and the two SALP-specific ones
+cover most of what comes up:
+
+- **Evidence gap** — an analyzer reports the wrong evidence state. Every element
+  carries a `provenance.diagnostics` string explaining its state; quoting it is
+  usually enough to locate the cause.
+- **Parser gap** — GACPD emitted a record the ingester does not handle. Paste the
+  raw excerpt: these records use CRLF endings and may leave fields blank, and
+  both have caused real bugs that do not survive being retyped.
+
+Anything else goes to **Bug report** or **Feature or enhancement**.
+
 ## Tests
 
 - `tests/unit/` — no network, no `data/gacpd/`, no clones.
