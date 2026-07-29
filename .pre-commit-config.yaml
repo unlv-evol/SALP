@@ -1,0 +1,37 @@
+# Mirrors the CI lint job, so failures surface before a push rather than after.
+#   pip install pre-commit && pre-commit install
+default_install_hook_types: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        # GACPD records and their expected parses are byte-sensitive
+        exclude: ^data/
+      - id: end-of-file-fixer
+        exclude: ^(data/|LICENSE$)
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: ^data/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(src|tests)/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^src/
+        pass_filenames: false
+        args: [--config-file=pyproject.toml]
+        additional_dependencies: [pydantic>=2.6, types-PyYAML>=6.0]

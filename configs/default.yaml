@@ -1,0 +1,21 @@
+paths:
+  # Drop real GACPD run output under data/gacpd/ (see its README for the layout).
+  gacpd_run: ./data/gacpd
+  output: ./data/out
+  # Bare clones of the source and target repositories, populated by
+  # `salp fetch-repos`. A run reads them locally and never fetches.
+  repo_cache: ./data/repos
+
+tools:
+  # External analysis tools live under tools/ and are git-ignored.
+  # null means "not configured": the analyzer records UNAVAILABLE with a
+  # diagnostic rather than failing the build.
+  refactoringminer_jar: null # ./tools/refactoringminer/RefactoringMiner.jar
+  tree_sitter_lib: null # ./tools/tree-sitter
+
+# Resolve repository-state pins against the clone cache. With no clone present
+# a pin stays date-based, which lowers Fidelity but never fails a run.
+resolve_pins: true
+
+framework_version: "1.1"
+log_level: INFO
