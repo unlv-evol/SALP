@@ -1,0 +1,55 @@
+name: Feature or enhancement
+description: A new capability — an analyzer, a language grammar, a metric, a tool integration
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - New analyzer or evidence category
+        - Language support (a tree-sitter grammar)
+        - External tool integration
+        - Characterization or scoring
+        - Adaptation-goodness metrics (Difficulty, Economy, Verifiability)
+        - Evidence reduction / context engineering
+        - Ingestion or repository access
+        - Tooling, CI, or docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: >
+        What is currently impossible, wrong, or unnecessarily hard? Concrete
+        beats abstract — point at a package or sample where it bites.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: >
+        If it adds evidence, say which category and which required elements it
+        would populate, and what it needs — a repository at a pinned commit, an
+        external tool, a grammar.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Expected effect on characterization
+      description: >
+        Which categories move, and roughly how far? "Would take `refactoring`
+        from 125 UNAVAILABLE to mostly PRESENT/VERIFIED_ABSENT." Write "none" if
+        it does not touch evidence.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
