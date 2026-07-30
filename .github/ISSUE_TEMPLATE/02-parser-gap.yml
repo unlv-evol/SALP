@@ -1,0 +1,73 @@
+name: Parser gap
+description: GACPD emitted something the ingester does not parse, or parses wrongly
+title: "[parser]: "
+labels: ["parser", "ingest"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The GACPD record parsers are keyed to field labels observed in real runs.
+        A different label, layout, or edge case shows up as an `UNAVAILABLE`
+        element with a diagnostic — never as a crash, and never as a guess.
+
+        **Paste the raw record.** These records use CRLF line endings and may
+        leave fields blank; both have caused real bugs, and neither survives
+        being retyped by hand. Use ``cat -v`` or attach the file.
+
+  - type: dropdown
+    id: record
+    attributes:
+      label: Which record
+      options:
+        - pr_results.txt (pull-request identity, dates)
+        - results.txt (repository pair, paths, similarity, classification)
+        - hunk artifact (hunk_<n>_full_del / full_add / additions / deletions)
+        - "*.patch (unified diff)"
+        - directory layout (MO / NA / ED, file directory naming)
+    validations:
+      required: true
+
+  - type: textarea
+    id: raw
+    attributes:
+      label: Raw excerpt
+      description: The lines that are mis-parsed, verbatim.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: recovered
+    attributes:
+      label: What was recovered vs what it should be
+      description: |
+        Output of the diagnostic snippet in `data/gacpd/README.md` is ideal:
+
+        ```
+        recovered: title=None, url='REPO'
+        expected:  title='KAFKA-13769 …', url='https://github.com/…'
+        ```
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Where this run came from
+      description: >
+        Repository pair and pull request, and anything unusual about how GACPD was
+        invoked (one-PR mode, a different version).
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: >
+            I confirmed this is a parsing gap and not missing data — the
+            information really is present in the record
+          required: true
+        - label: The excerpt preserves original line endings and blank fields
