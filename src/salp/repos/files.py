@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path, PurePosixPath
 
 from salp.models import RepositoryStatePin
@@ -104,6 +105,69 @@ _MAVEN_DEP = re.compile(
 )
 
 
+# Gradle version catalogs: `implementation libs.guava` resolves through
+# gradle/libs.versions.toml rather than naming a coordinate inline. Modern Gradle
+# builds declare almost everything this way, so a build-file scan alone finds
+# nothing for them.
+_CATALOG = "gradle/libs.versions.toml"
+# Older Gradle builds keep the same idea in a Groovy map:
+#   versions += [ guava: "31.1-jre", ... ]
+#   libs     += [ guava: "com.google.guava:guava:$versions.guava", ... ]
+_GROOVY_CATALOG = "gradle/dependencies.gradle"
+_GROOVY_ENTRY = re.compile(r"""^\s*(\w+)\s*:\s*["']([^"']+)["']""", re.MULTILINE)
+_GROOVY_BLOCK = re.compile(r"(versions|libs)\s*\+?=\s*\[(.*?)\n\s*\]", re.DOTALL)
+_INTERPOLATION = re.compile(r"\$\{?versions\.(\w+)\}?")
+
+
+def _catalog_dependencies(cache_dir: Path, pin: RepositoryStatePin) -> list[str]:
+    """Coordinates declared in a Gradle version catalog, resolved to versions."""
+    raw = read_file(cache_dir, pin, _CATALOG)
+    if not raw:
+        return []
+    try:
+        catalog = tomllib.loads(raw)
+    except tomllib.TOMLDecodeError:
+        return []
+
+    versions = {k: str(v) for k, v in (catalog.get("versions") or {}).items()}
+    found: list[str] = []
+    for entry in (catalog.get("libraries") or {}).values():
+        if isinstance(entry, str):  # guava = "com.google.guava:guava:31.1"
+            found.append(entry)
+            continue
+        if not isinstance(entry, dict):
+            continue
+        module = entry.get("module") or ":".join(
+            filter(None, (entry.get("group"), entry.get("name")))
+        )
+        if not module:
+            continue
+        version = entry.get("version")
+        if isinstance(version, dict):  # {version.ref = "guava"}
+            version = versions.get(str(version.get("ref", "")), "")
+        found.append(f"{module}:{version}" if version else str(module))
+    return found
+
+
+def _groovy_catalog_dependencies(cache_dir: Path, pin: RepositoryStatePin) -> list[str]:
+    """Coordinates from a Groovy dependency map, with ``$versions.x`` resolved."""
+    raw = read_file(cache_dir, pin, _GROOVY_CATALOG)
+    if not raw:
+        return []
+
+    blocks: dict[str, str] = {}
+    for name, body in _GROOVY_BLOCK.findall(raw):
+        blocks[name] = blocks.get(name, "") + body
+    versions = dict(_GROOVY_ENTRY.findall(blocks.get("versions", "")))
+
+    found: list[str] = []
+    for _, coordinate in _GROOVY_ENTRY.findall(blocks.get("libs", "")):
+        resolved = _INTERPOLATION.sub(lambda m: versions.get(m.group(1), ""), coordinate)
+        if ":" in resolved:
+            found.append(resolved.rstrip(":"))
+    return found
+
+
 def read_dependencies(
     cache_dir: Path, pin: RepositoryStatePin | None, near: str | None
 ) -> list[str] | None:
@@ -117,7 +181,9 @@ def read_dependencies(
     if pin is None or not pin.is_resolved or not near:
         return None
     build_files = find_build_files(cache_dir, pin, near)
-    if not build_files:
+    if not build_files and not any(
+        file_exists(cache_dir, pin, c) for c in (_CATALOG, _GROOVY_CATALOG)
+    ):
         return None
 
     found: list[str] = []
@@ -129,5 +195,7 @@ def read_dependencies(
             found += [f"{g.strip()}:{a.strip()}" for g, a in _MAVEN_DEP.findall(text)]
         else:
             found += [c.strip() for c in _GRADLE_DEP.findall(text)]
+    found += _catalog_dependencies(cache_dir, pin)
+    found += _groovy_catalog_dependencies(cache_dir, pin)
     # keep first-seen order: the nearest build file's declarations lead
     return list(dict.fromkeys(found))

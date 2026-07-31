@@ -18,6 +18,7 @@ from salp.ingest import (
     split_patch,
 )
 from salp.models import (
+    DEFAULT_SPECS,
     SAP,
     ChangeType,
     FunctionPayload,
@@ -111,6 +112,25 @@ class _HunkSource:
         return heading or f"\x00hunk:{self.hunk_id}"
 
 
+def _with_dependencies(
+    pin: RepositoryStatePin | None, deps: list[str] | None
+) -> RepositoryStatePin | None:
+    """Attach resolved dependency versions to a pin.
+
+    Coordinates arrive as ``group:artifact:version``; the pin records them keyed
+    by coordinate so a later run can tell whether the dependency set of a bound
+    state has moved. A coordinate without a version contributes an empty string
+    rather than being dropped -- that it was declared is itself the fact.
+    """
+    if pin is None or not deps:
+        return pin
+    versions: dict[str, str] = {}
+    for coordinate in deps:
+        group, _, version = coordinate.rpartition(":")
+        versions[group or coordinate] = version if group else ""
+    return pin.model_copy(update={"dependency_versions": versions})
+
+
 def _deps(
     cache_dir: Path | None, pin: RepositoryStatePin | None, path: str | None
 ) -> list[str] | None:
@@ -130,6 +150,25 @@ def _covering_tests(
     return grep_files(
         cache_dir, pin, entity, "*Test*.java", "*Tests.java", "*Spec*.java", "*Test*.scala"
     )
+
+
+def _region_tests(
+    cache_dir: Path | None, pin: RepositoryStatePin | None, sources: list[_HunkSource]
+) -> list[str] | None:
+    """Target tests naming an edited method, not merely its enclosing type.
+
+    A test that names the method exercises the edit region itself, which is what
+    separates full coverage from partial.
+    """
+    if cache_dir is None or pin is None or not pin.is_resolved:
+        return None
+    names = {
+        s.header.declared_name() for s in sources if s.header and s.header.declared_name()
+    }
+    found: list[str] = []
+    for name in sorted(n for n in names if n):
+        found += grep_files(cache_dir, pin, f"{name}(", "*Test*.java", "*Tests.java")
+    return sorted(set(found))
 
 
 def _at_pin(
@@ -263,7 +302,8 @@ def build_sap(
     source_pin: RepositoryStatePin | None = None,
     target_pin: RepositoryStatePin | None = None,
     cache_dir: Path | None = None,
-    refactorings: list[dict[str, Any]] | str | None = None,
+    refactorings: tuple[dict[str, Any], ...] | str | None = None,
+    refactoringminer_jar: Path | None = None,
 ) -> SAP:
     """Construct one file-scoped SAP from an MO GACPD file."""
     analyzers = build_all()
@@ -308,12 +348,19 @@ def build_sap(
     source_file_text = _at_pin(cache_dir, source_pin, gf.source_path)
     target_file_text = _at_pin(cache_dir, target_pin, gf.localization.divergent_path)
 
+    # §17: a pin records the resolved dependency versions of the state it binds.
+    source_deps = _deps(cache_dir, source_pin, gf.source_path)
+    target_deps = _deps(cache_dir, target_pin, gf.localization.divergent_path)
+    source_pin = _with_dependencies(source_pin, source_deps)
+    target_pin = _with_dependencies(target_pin, target_deps)
+
     # Facts recovered once per file and shared by every hunk of it.
     entity = Path(gf.display_name).stem
     shared = {
-        "source_dependencies": _deps(cache_dir, source_pin, gf.source_path),
-        "target_dependencies": _deps(cache_dir, target_pin, gf.localization.divergent_path),
+        "source_dependencies": source_deps,
+        "target_dependencies": target_deps,
         "covering_tests": _covering_tests(cache_dir, target_pin, entity),
+        "region_tests": _region_tests(cache_dir, target_pin, sources),
         "target_entity": entity,
         "refactorings": refactorings,
     }
@@ -337,6 +384,7 @@ def build_sap(
             target_repo=target_repo,
             source_pin=source_pin,
             target_pin=target_pin,
+            change_type=sap.change_type,
             hunk_index=source.index,
             hunk_count=len(sources),
             input_artifacts=_input_artifacts(gf, source.artifacts),
@@ -349,6 +397,7 @@ def build_sap(
                 "alignment_confidence": gf.localization.confidence(source.hunk_id),
                 "similarity_breakdown": gf.localization.breakdown(source.hunk_id),
                 "candidates": [],
+                "refactoringminer_jar": refactoringminer_jar,
                 "edit_region": source.header.spans() if source.header else None,
                 "region_diagnostic": _REGION_DIAGNOSTIC,
                 "derivation_note": source.derivation_note,
@@ -358,6 +407,15 @@ def build_sap(
 
         categories = {}
         for analyzer in analyzers:
+            spec = DEFAULT_SPECS[analyzer.category]
+            if ctx.change_type not in spec.applicable_to:
+                # Gate centrally rather than in each analyzer: a category the
+                # change type does not have is recorded NOT_APPLICABLE with a
+                # reason, and leaves both characterization denominators.
+                categories[analyzer.category.value] = analyzer.not_applicable(
+                    ctx, f"not applicable to a {ctx.change_type.value} change"
+                )
+                continue
             try:
                 ce = analyzer.investigate(ctx)
             except Exception as exc:  # noqa: BLE001 - one analyzer must not abort the build
@@ -377,6 +435,9 @@ def build_sap(
                 ),
                 categories=categories,
                 relationships=_relationships(source.hunk_id, fn_id),
+                # condition 5: several plausible alignments with no supported
+                # primary caps Readiness at Moderate
+                localization_ambiguous=len(shared.get("candidates") or []) > 1,
             )
         )
 
