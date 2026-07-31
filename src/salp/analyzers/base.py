@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from salp.models import (
     Category,
     CategoryEvidence,
+    ChangeType,
     ElementSpec,
     EvidenceObject,
     EvidenceState,
@@ -39,6 +40,7 @@ class AnalysisContext:
     target_repo: str | None = None
     source_pin: RepositoryStatePin | None = None
     target_pin: RepositoryStatePin | None = None
+    change_type: ChangeType = ChangeType.MAPPED
     hunk_index: int = 1
     hunk_count: int = 1
     input_artifacts: list[str] = field(default_factory=list)
@@ -63,6 +65,15 @@ class Analyzer(abc.ABC):
     tool: str | None = None
     version: str | None = None
 
+    def tool_version(self) -> str | None:
+        """The version of the analysis tool, recorded in provenance.
+
+        Evidence is reproducible only under fixed tool versions and pinned
+        repository states, so an analyzer backed by an external tool overrides
+        this to report the version actually in use rather than a hardcoded one.
+        """
+        return self.version
+
     @abc.abstractmethod
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         """Run the investigation and return category evidence."""
@@ -78,7 +89,7 @@ class Analyzer(abc.ABC):
         return Provenance(
             analysis_component=self.component_name,
             analysis_tool=self.tool,
-            analysis_version=self.version,
+            analysis_version=self.tool_version(),
             input_artifacts=list(ctx.input_artifacts) if ctx else [],
             analysis_status=status,
             diagnostics=diagnostics,
@@ -162,6 +173,29 @@ class Analyzer(abc.ABC):
             category=self.category,
             elements=[
                 self.verified_absent_element(ctx, spec, note)
+                for spec in elements_for(self.category)
+            ],
+        )
+
+    def not_applicable(self, ctx: AnalysisContext, reason: str) -> CategoryEvidence:
+        """Every required element NOT_APPLICABLE: the category does not apply here.
+
+        Distinct from VERIFIED_ABSENT, which asserts a phenomenon was looked for
+        and found not to exist. This asserts the question is not asked at all for
+        this change type, so the category leaves both the Coverage and the
+        Fidelity denominator. The reason is recorded on every element.
+        """
+        return CategoryEvidence(
+            category=self.category,
+            elements=[
+                EvidenceObject(
+                    object_id=self._object_id(ctx, spec.element_id),
+                    object_type=f"{self.category.value}.{spec.element_id}",
+                    state=EvidenceState.NOT_APPLICABLE,
+                    provenance=self._provenance(
+                        ctx, status="not_applicable", diagnostics=reason
+                    ),
+                )
                 for spec in elements_for(self.category)
             ],
         )

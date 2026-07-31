@@ -11,6 +11,7 @@ from salp.analyzers.base import (
     CategoryDraft,
     register,
 )
+from salp.analyzers.tools import tree_sitter_version
 from salp.models import (
     Category,
     CategoryEvidence,
@@ -37,6 +38,9 @@ class CompatibilityAnalyzer(Analyzer):
     category = Category.COMPATIBILITY
     component_name = "compatibility"
     tool = "import-and-build-analysis"
+
+    def tool_version(self) -> str | None:
+        return tree_sitter_version()
 
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         d = self.draft(ctx, "no file available at the pinned repository state")
