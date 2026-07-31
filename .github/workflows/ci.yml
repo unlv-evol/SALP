@@ -58,6 +58,54 @@ jobs:
           path: coverage.xml
           if-no-files-found: error
 
+  conformance:
+    name: schema conformance and artifact generation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev,structural]"
+
+      # The real GACPD sample is git-ignored, so CI generates a synthetic run
+      # with the same record formats. Pins stay unresolved without clones, which
+      # is the degraded path the pipeline must still handle.
+      - name: generate a run
+        run: |
+          python - <<'EOF'
+          from pathlib import Path
+          from tests.unit.test_ingest_and_pipeline import _make_fixture
+          _make_fixture(Path("ci-run"), hunks=3)
+          EOF
+          salp run --gacpd-run ci-run --output ci-out
+
+      # §21: verify the pipeline produced the artifacts it must produce.
+      - name: artifact generation check
+        run: |
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          out = Path("ci-out")
+          saps = sorted(out.glob("*/PR-*/sap-*"))
+          assert saps, "the pipeline minted no SAP"
+          missing = [
+              str(p / name)
+              for p in saps
+              for name in ("sap.json", "characterization.json", "provenance.json", "change.json")
+              if not (p / name).is_file()
+          ]
+          if missing:
+              sys.exit("missing required artifacts:\n  " + "\n  ".join(missing))
+          print(f"{len(saps)} SAP(s), all required artifacts present")
+          EOF
+
+      # §21: verify they conform to the schema. Exits non-zero on any finding.
+      - name: schema conformance check
+        run: salp validate --output ci-out
+
   build:
     name: build distribution
     runs-on: ubuntu-latest

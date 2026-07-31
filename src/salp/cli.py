@@ -24,6 +24,10 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument("--output", type=Path, default=None, help="output directory")
     run.add_argument("--repo-cache", type=Path, default=None, help="local bare-clone cache")
     run.add_argument(
+        "--no-refactorings", action="store_true",
+        help="skip refactoring detection, the slowest analysis",
+    )
+    run.add_argument(
         "--no-resolve-pins", action="store_true",
         help="skip repository-state pin resolution (leaves every pin date-based)",
     )
@@ -37,6 +41,11 @@ def _build_parser() -> argparse.ArgumentParser:
     fetch.add_argument(
         "--dry-run", action="store_true", help="report what would be fetched, and stop"
     )
+
+    validate = sub.add_parser(
+        "validate", help="check written SAPs against the schema (exit 1 on any finding)"
+    )
+    validate.add_argument("--output", type=Path, default=None, help="output directory")
 
     sub.add_parser("categories", help="list registered evidence categories")
 
@@ -61,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
             config.paths.output = args.output
         if args.no_resolve_pins:
             config.resolve_pins = False
+        if args.no_refactorings:
+            config.detect_refactorings = False
         from salp.pipeline import run as run_pipeline
 
         minted = run_pipeline(config)
@@ -76,6 +87,20 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"Repository cache ready at {config.paths.repo_cache}")
         return 0
+
+    if args.command == "validate":
+        from salp.packaging import validate_output
+
+        if args.output:
+            config.paths.output = args.output
+        report = validate_output(config.paths.output)
+        for problem in report.errors:
+            log.error("%s", problem)
+        print(
+            f"Checked {report.checked} SAP(s) under {config.paths.output}: "
+            f"{'conformant' if report.ok else f'{len(report.errors)} finding(s)'}"
+        )
+        return 0 if report.ok else 1
 
     if args.command == "categories":
         from salp.analyzers import build_all

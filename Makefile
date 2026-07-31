@@ -1,5 +1,5 @@
 # Development entry points. `make check` is what CI runs.
-.PHONY: help install dev check lint type test cov fetch run clean
+.PHONY: help install dev check lint type test cov validate conformance fetch run clean
 
 help:  ## show this help
 	@grep -hE '^[a-z-]+:.*?##' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -11,7 +11,7 @@ dev:  ## install with dev and structural extras, plus pre-commit hooks
 	pip install -e ".[dev,structural]"
 	pre-commit install || echo "pre-commit not installed; skipping hooks"
 
-check: lint type test  ## everything CI runs
+check: lint type test  ## everything CI runs (except conformance, which needs a run)
 
 lint:  ## ruff
 	ruff check src tests
@@ -21,6 +21,11 @@ type:  ## mypy
 
 test:  ## pytest
 	pytest
+
+validate:  ## check written SAPs in data/out against the schema
+	salp -c configs/default.yaml validate
+
+conformance: run validate  ## generate SAPs, then verify they conform
 
 cov:  ## pytest with coverage
 	pytest --cov=salp --cov-report=term-missing

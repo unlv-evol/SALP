@@ -65,7 +65,20 @@ Maps almost one-to-one onto the required information elements of the
 | `get_methods_in_hunk` | `structural/context.py::methods_overlapping` | the overlap predicate `max(starts) <= min(ends)`, and the 0-based/1-based shift |
 | `get_file_at_commit` | `repos/files.py::read_file` | converged independently; see §4 |
 
-### 1.5 `Refactoring_Detection/Refactoring_Detection.py`
+### 1.5 `Refactoring_Detection/Refactoring_History_Construction.py`
+
+Per-file filtering of a RefactoringMiner report. Adopted in
+`analyzers/refactoring.py`.
+
+| Original | Here | Notes |
+| --- | --- | --- |
+| filter locations by `filePath` | `Location.names` | matches full path or basename |
+| left/right index correlation | `entity_mapping` | **conditional**, see §3.9 |
+| retain `repository`, `sha1`, `url` per commit | `relevant_refactorings` | keeps a finding traceable to its revision |
+| retain `markup` | `relevant_refactorings` | RefactoringMiner's highlighted description |
+| `Rename File` skipped | `FILE_LEVEL` | **not** skipped, see §3.10 |
+
+### 1.6 `Refactoring_Detection/Refactoring_Detection.py`
 
 | Original | Here | Notes |
 | --- | --- | --- |
@@ -166,6 +179,45 @@ of the SAP schema and letting mypy check the evidence-construction path.
 stable across a parameter rename and comparable between variants. That was the
 original's behaviour; it is now the documented contract and is tested.
 
+### 3.9 Index correlation applied only where it holds *(correctness)*
+
+The reference implementation treats `leftSideLocations` and `rightSideLocations`
+as parallel arrays and reads the right side at the left side's index:
+
+```python
+relevant_right_side_locations = [refactoring['rightSideLocations'][i] for i in relevant_indices]
+```
+
+A real run over `linkedin/kafka` (248 commits, 326 refactorings) shows this holds
+for only half the data: **162 of 326** have arrays of *different* lengths. An
+Extract Method reported 18 left and 22 right locations — those are all the
+locations on each side, not counterparts. For one-to-one refactorings such as
+Rename Method the correlation is real and useful.
+
+`entity_mapping` therefore pairs by position **only when the arrays agree in
+length**, and otherwise reports each location unpaired with `correlated: false`.
+An unmapped finding is more useful than an invented correspondence. Locked in by
+`test_mismatched_location_arrays_are_not_paired`.
+
+The original also carries an indexing bug in the same block: it builds a
+*compacted* list of matching locations, then indexes it with positions from the
+*original* array —
+
+```python
+for relevenat_index in relevant_indices:
+    side_pair_info = {"Left Side": relevant_left_side_locations[relevenat_index], ...}
+```
+
+— which raises `IndexError` whenever the first match is not at position 0.
+
+### 3.10 File-level moves are the most relevant refactorings, not the least
+
+The original skips them (`'found a case of rename file, not handling it though'`).
+For a reusable change a Rename/Move File or Class relocates the *landing site
+itself*, which is precisely what adaptation must reconcile. `FILE_LEVEL` marks
+them, and they produce a `landing_site_relocated_by` edge rather than the
+ordinary `landing_site_refactored_by`.
+
 ### 3.8 Graceful degradation *(architecture)*
 
 tree-sitter is the optional `structural` extra. Its absence sets
@@ -194,7 +246,7 @@ of GACPD's output is right:
 
 ## 5. Wired since
 
-### Refactoring detection — adopted
+### Refactoring detection — adopted and running
 
 The RefactoringMiner command shapes were taken verbatim from
 `Refactoring_Detection.py` and now live in `src/salp/analyzers/tools.py`:
@@ -208,7 +260,15 @@ The RefactoringMiner command shapes were taken verbatim from
 ```
 
 The `-bc` form was chosen: both endpoints are already resolved as repository
-state pins, so it needs no token. One change — the original passes `check=True`,
+state pins, so it needs no token. RefactoringMiner 3.1.4 ships as a distribution
+(`bin/` launcher plus `lib/`), not a fat jar, so `tools.refactoringminer_jar`
+points at the launcher and the version is read from the distribution directory
+name.
+
+One addition of our own: the runner is cached on its arguments. Every pull
+request of a variant pair shares one divergence-to-cutoff range, so an uncached
+runner re-analyses the same history once per pull request — six runs over three
+distinct ranges on the reference sample, which took 2m45s against 58s cached. One change — the original passes `check=True`,
 which raises on a non-zero exit; `run_refactoring_miner` returns the stderr as a
 diagnostic string instead, and the analyzer records it as UNAVAILABLE. An
 unconfigured or failing tool is an information gap, not a pipeline error.
@@ -262,16 +322,23 @@ subpackages. The mapping above is current; see the README for the layout.)
 
 ## 7. Effect on the benchmark
 
-Over the 11 SAPs of the current sample, across the two waves of adoption:
+Over the 11 SAPs of the current sample, across the three waves of adoption
+(tree-sitter context, then compatibility and verification, then RefactoringMiner):
 
 | Category | before | after |
 | --- | --- | --- |
 | structural | 150 U | 138 P / 12 U |
 | surrounding | 24 P / 125 U | 114 P / 18 VA / 18 U |
-| compatibility | 175 U | 135 P / 26 VA / 14 U |
+| compatibility | 175 U | 149 P / 12 VA / 14 U |
 | verification | 100 U | 50 P / 50 U |
+| refactoring | 125 U | 125 VA |
 
-Coverage rose from 0.529 to **0.824** on every Java SAP, and Readiness from
+Coverage rose from 0.529 to **0.941** on every Java SAP, and Readiness from
 uniformly Moderate to **9 High / 2 Moderate**. The 12 remaining structural gaps
 and both Moderate packages are the two Scala files: no grammar is configured, so
 they report an explicit UNAVAILABLE rather than being silently skipped.
+
+Refactoring is wholly VERIFIED_ABSENT rather than PRESENT, which is the correct
+finding: RefactoringMiner analysed 248 commits of the Kafka target's drift and
+reported 326 refactorings, none of them touching the five files these SAPs are
+about. The landing sites did not move.

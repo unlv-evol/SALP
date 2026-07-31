@@ -7,6 +7,7 @@ the package objects themselves.
 from salp.models.categories import (
     DEFAULT_SPECS,
     FOUNDATIONAL_SETS,
+    REQUIRED_SETS,
     Category,
     CategoryEvidence,
     CategorySpec,
@@ -37,6 +38,7 @@ from salp.models.sap import (
 )
 
 __all__ = [
+    "REQUIRED_SETS",
     "CATEGORY_ELEMENTS",
     "Category",
     "CategoryEvidence",

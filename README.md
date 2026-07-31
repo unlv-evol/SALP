@@ -50,7 +50,7 @@ Install the `structural` extra, not just `dev` — `make dev` does this for you,
 and the equivalent is `pip install -e ".[dev,structural]"`. It carries
 tree-sitter, without which the structural, surrounding, and compatibility
 analyzers all report `UNAVAILABLE`. A run still succeeds, but on the reference
-sample mean Coverage over all 25 hunks falls from 0.805 to 0.666 and **no package
+sample mean Coverage over all 25 hunks falls from 0.922 to 0.666 and **no package
 reaches High Readiness** — all eleven cap at Moderate.
 
 Then point it at a GACPD run:
@@ -73,6 +73,11 @@ data/out/
   langerhansDogecoinjNew-bitcoinjBitcoinj/
     PR-2731/   pr.json  _context/  sap-WalletFiles/  sap-MnemonicCode/  ...
 ```
+
+`salp validate` re-checks written SAPs against the schema — every required file
+present, every index reference resolving, every object identifier unique, every
+evidence object carrying a valid state and provenance, and the composite ordering
+total. It exits non-zero on any finding, so CI gates on it.
 
 Per-command flags: `--gacpd-run`, `--output`, and `--repo-cache` override the
 config; `--no-resolve-pins` skips commit resolution; `fetch-repos --dry-run`
@@ -142,6 +147,7 @@ src/salp/
     compatibility.py      #   APIs and dependencies
     verification.py       #   target-side oracle discovery
     refactoring.py        #   RefactoringMiner
+    standalone.py         #   artifact identity + target placement
     tools.py              #   external tool runners
 
   characterization/       # scoring
@@ -231,9 +237,20 @@ the rest. See [CONTRIBUTING.md](CONTRIBUTING.md) to add an analysis.
 
 ## The characterization model (as implemented)
 
-* **Coverage** — investigation completion over *required* categories. `PRESENT` and
-  `VERIFIED_ABSENT` are resolved (1); `UNAVAILABLE` is 0. Optional/conditional
-  categories never reduce Coverage.
+* **Evidence states** — four, each behaving differently under characterization:
+
+  | State | Coverage | Fidelity |
+  | --- | --- | --- |
+  | `PRESENT` | resolved | scored |
+  | `VERIFIED_ABSENT` | resolved | excluded |
+  | `UNAVAILABLE` | 0 | excluded |
+  | `NOT_APPLICABLE` | **excluded** | **excluded** |
+
+  `NOT_APPLICABLE` leaves *both* denominators — that is what lets a standalone
+  artifact change, which has no Transformation Unit, still reach High Readiness
+  rather than being capped by categories it structurally cannot have.
+* **Coverage** — investigation completion over the categories *required for the
+  change type*. Optional and `NOT_APPLICABLE` categories never reduce it.
 * **Fidelity** — representation quality over `PRESENT` elements *only*. A category
   with no `PRESENT` element is undefined and excluded from the aggregate, so
   `VERIFIED_ABSENT` is credited to Coverage but neither rewards nor penalizes
@@ -276,40 +293,49 @@ depends on.
 All eight evidence categories are implemented. Foundational evidence comes from
 GACPD; structural, surrounding, compatibility, and verification are recovered
 from the whole files and repository trees at their pinned commits; refactoring
-runs RefactoringMiner when `tools.refactoringminer_jar` is configured and reports
-an explicit gap when it is not.
+runs RefactoringMiner over the target's divergence-to-cutoff drift when
+`tools.refactoringminer_jar` is configured, and reports an explicit gap when it
+is not.
 
-On the reference sample — 11 SAPs, 25 hunks, 1,175 required information elements:
+On the reference sample — 11 SAPs, 25 hunks, 1,450 required information elements:
 
 | Population | Mean Coverage | Readiness |
 | --- | --- | --- |
-| Java SAPs (23 hunks) | 0.824 | 9 High |
-| Scala SAPs (2 hunks) | 0.588 | 2 Moderate |
-| All hunks | 0.805 | — |
+| Java SAPs (23 hunks) | 0.941 | 9 High |
+| Scala SAPs (2 hunks) | 0.706 | 2 Moderate |
+| All hunks | 0.922 | — |
 
 Per category, across all 25 hunks:
 
-| Category | PRESENT | VERIFIED_ABSENT | UNAVAILABLE |
-| --- | ---: | ---: | ---: |
-| source_change | 150 | 0 | 0 |
-| target_localization | 150 | 25 | 0 |
-| function_transformation | 144 | 6 | 0 |
-| structural | 138 | 0 | 12 |
-| surrounding | 114 | 18 | 18 |
-| compatibility | 135 | 26 | 14 |
-| verification | 50 | 0 | 50 |
-| refactoring | 0 | 0 | 125 |
+| Category | PRESENT | VERIFIED_ABSENT | UNAVAILABLE | NOT_APPLICABLE |
+| --- | ---: | ---: | ---: | ---: |
+| source_change | 150 | 0 | 0 | 0 |
+| target_localization | 150 | 25 | 0 | 0 |
+| function_transformation | 144 | 6 | 0 | 0 |
+| compatibility | 149 | 12 | 14 | 0 |
+| structural | 138 | 0 | 12 | 0 |
+| surrounding | 114 | 18 | 18 | 0 |
+| verification | 50 | 0 | 50 | 0 |
+| refactoring | 0 | 125 | 0 | 0 |
+| standalone | 0 | 150 | 0 | 0 |
+| artifact_placement | 0 | 0 | 0 | 125 |
 
-Refactoring is entirely UNAVAILABLE because no RefactoringMiner jar is installed;
+Refactoring is entirely VERIFIED_ABSENT: RefactoringMiner ran over the target's
+drift (248 commits, 326 refactorings for the Kafka pair) and none of them touched
+the five files these SAPs are about — the landing sites did not move.
+`artifact_placement` is `NOT_APPLICABLE` on all 25 hunks (125 elements), every
+SAP here being a mapped change, and so leaves both denominators rather than
+counting against Coverage.
 the 12 structural gaps and both Moderate packages are the two Scala files, which
-have no configured grammar. Both are reported as explicit gaps with diagnostics
+have no configured grammar. These are reported as explicit gaps with diagnostics
 rather than silently skipped — which is the signal the evidence model exists to
 give.
 
 Known gaps, in the order they are worth closing:
 
-1. **Standalone change type** — `F = {artifact-source, artifact-placement}` is only
-   half-modelled; no standalone SAP is ever constructed.
+1. **Minting standalone SAPs** — the change type, its foundational set, and both
+   analyzers exist and are tested, but the pipeline only mints MO (mapped) files,
+   so no standalone SAP is constructed from a real run yet.
 2. **A Scala grammar** — two of the eleven sample SAPs cap at Moderate purely for
    want of one.
 3. **Engine hardening** — Coverage iterates the categories it is handed rather than

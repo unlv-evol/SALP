@@ -53,7 +53,8 @@ salp = "salp.cli:main"
 packages = ["src/salp"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+# "." so cross-test imports resolve under plain `pytest`, not only `python -m pytest`
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 addopts = "-q --strict-markers --strict-config"
 markers = [

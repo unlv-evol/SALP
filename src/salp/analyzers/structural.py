@@ -11,6 +11,7 @@ from salp.analyzers.base import (
     Analyzer,
     register,
 )
+from salp.analyzers.tools import tree_sitter_version
 from salp.models import (
     Category,
     CategoryEvidence,
@@ -63,6 +64,9 @@ class StructuralAnalyzer(Analyzer):
     category = Category.STRUCTURAL
     component_name = "structural-ast"
     tool = "tree-sitter"
+
+    def tool_version(self) -> str | None:
+        return tree_sitter_version()
 
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         if not TREE_SITTER_AVAILABLE:
@@ -142,6 +146,9 @@ class SurroundingAnalyzer(Analyzer):
     category = Category.SURROUNDING
     component_name = "surrounding"
     tool = "tree-sitter"
+
+    def tool_version(self) -> str | None:
+        return tree_sitter_version()
 
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         """Recover the program context beyond the edited method itself.

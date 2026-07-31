@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from salp.analyzers.base import AnalysisContext, Analyzer, register
 from salp.models import (
@@ -65,10 +66,20 @@ class TargetLocalizationAnalyzer(Analyzer):
     tool = "gacpd"
 
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
-        d = self.draft(ctx, "not produced by GACPD")
         pin = ctx.target_pin
-        candidates = ctx.extras.get("candidates") or []
+        raw_candidates: Any = ctx.extras.get("candidates") or []
+        candidates = [str(c) for c in raw_candidates]
         confidence = ctx.extras.get("alignment_confidence")
+
+        # §6: zero candidates is a failed localization, not a partial one. An MO
+        # classification asserts a target region exists, so its absence means the
+        # localization could not be represented at all.
+        if not ctx.target_path and not candidates:
+            return self.unavailable(
+                ctx, "GACPD reported no target region for this file"
+            )
+
+        d = self.draft(ctx, "not produced by GACPD")
 
         d.present(
             "target_repo_revision",
@@ -89,7 +100,10 @@ class TargetLocalizationAnalyzer(Analyzer):
         # candidates are a completed investigation that found none -- verified
         # absence, not missing evidence.
         if candidates:
-            d.present("alternative_candidates", {"candidates": candidates})
+            d.present("alternative_candidates", {
+                "candidates": candidates,
+                "ambiguous": len(candidates) > 1,
+            })
         else:
             d.absent("alternative_candidates", "GACPD localized a single target region (MO)")
         if confidence is None:

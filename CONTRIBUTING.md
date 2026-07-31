@@ -21,6 +21,24 @@ make run      # construct SAPs into data/out/
 Tests that need the sample skip themselves without it, so `make check` passes on
 a clean clone. To run only the fast suite: `pytest -m "not integration"`.
 
+`make check` does not validate written packages, because that needs a run. CI has
+a separate **conformance** job that generates a run, checks the expected
+artifacts exist, and then checks them against the schema. Locally:
+
+```bash
+make conformance    # = make run && make validate
+salp validate --output data/out    # or just the check, on an existing run
+```
+
+`salp validate` exits non-zero on any finding, so CI gates on it. It checks that
+every required file is present, every index reference resolves, every object
+identifier is unique, every evidence object carries a valid state and provenance,
+and the composite hunk ordering is total.
+
+Refactoring detection is the slowest analysis and is cached under
+`data/repos/.refactoring-cache/`. `salp run --no-refactorings` skips it while
+iterating on something else.
+
 ## Layout
 
 `src/salp/` is layered by pipeline stage — see the tree in the
@@ -60,15 +78,26 @@ Four rules the evidence model depends on:
 1. **Build through `self.draft(...)`.** It seeds every required element of the
    category as `UNAVAILABLE`, so an element you forget stays an explicit gap with
    a diagnostic instead of vanishing from the Coverage denominator.
-2. **`VERIFIED_ABSENT` is not `UNAVAILABLE`.** An investigation that completed and
-   found nothing is verified absence: it takes full Coverage credit and is
-   excluded from Fidelity. An investigation that could not run is unavailable and
-   costs Coverage. Confusing the two is called out in the specification as a
-   common representation mistake.
+2. **Pick the right state.** Four exist, and they are not interchangeable:
+
+   | State | Meaning | Coverage | Fidelity |
+   | --- | --- | --- | --- |
+   | `PRESENT` | recovered | resolved | scored |
+   | `VERIFIED_ABSENT` | looked for, confirmed absent | resolved | excluded |
+   | `UNAVAILABLE` | could not determine | 0 | excluded |
+   | `NOT_APPLICABLE` | the question does not arise for this change type | excluded | excluded |
+
+   Confusing `VERIFIED_ABSENT` with `UNAVAILABLE` is called out in the
+   specification as a common representation mistake. `NOT_APPLICABLE` is set
+   centrally by the builder from `CategorySpec.applicable_to` — an analyzer
+   should not normally return it itself.
 3. **Partial recovery is `PRESENT` with a representation below 1.0**, not a
    failure. Declare the fields an element needs in `elements.py` and the
    fraction is computed for you.
-4. **A missing tool is a gap, not an error.** Return `UNAVAILABLE` with a
+4. **Record the tool version.** Override `tool_version()` to report the version
+   actually installed rather than a hardcoded string; evidence is reproducible
+   only under fixed tool versions and pinned repository states.
+5. **A missing tool is a gap, not an error.** Return `UNAVAILABLE` with a
    diagnostic naming the fix; never raise. One analyzer must not abort a run.
 
 Reserve `blocking_conflict` for a concrete obstacle you can actually

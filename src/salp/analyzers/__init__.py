@@ -26,6 +26,11 @@ from salp.analyzers.gacpd import (
     TransformationAnalyzer,
 )
 from salp.analyzers.refactoring import RefactoringAnalyzer
+from salp.analyzers.standalone import (
+    ArtifactPlacementAnalyzer,
+    StandaloneArtifactAnalyzer,
+    is_standalone_artifact,
+)
 from salp.analyzers.structural import StructuralAnalyzer, SurroundingAnalyzer
 from salp.analyzers.tools import run_refactoring_miner
 from salp.analyzers.verification import VerificationAnalyzer
@@ -35,7 +40,9 @@ __all__ = [
     "Analyzer",
     "CategoryDraft",
     "CompatibilityAnalyzer",
+    "ArtifactPlacementAnalyzer",
     "RefactoringAnalyzer",
+    "StandaloneArtifactAnalyzer",
     "SourceChangeAnalyzer",
     "StructuralAnalyzer",
     "SurroundingAnalyzer",
@@ -46,5 +53,6 @@ __all__ = [
     "get",
     "register",
     "registered_categories",
+    "is_standalone_artifact",
     "run_refactoring_miner",
 ]

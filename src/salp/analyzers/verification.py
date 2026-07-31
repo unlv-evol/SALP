@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from salp.analyzers.base import AnalysisContext, Analyzer, register
+from salp.analyzers.tools import git_version
 from salp.models import (
     Category,
     CategoryEvidence,
@@ -29,6 +30,9 @@ class VerificationAnalyzer(Analyzer):
     component_name = "verification"
     tool = "git-grep"
 
+    def tool_version(self) -> str | None:
+        return git_version()
+
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         tests: Any = ctx.extras.get("covering_tests")
         if tests is None:
@@ -43,8 +47,22 @@ class VerificationAnalyzer(Analyzer):
                 ctx, f"no target test references {entity} at the pinned revision"
             )
 
+        # §13 distinguishes full from partial coverage. A test naming the edited
+        # *method* exercises the edit region; one naming only the enclosing type
+        # covers the class but not necessarily the region -- partial. Establishing
+        # true line coverage would mean running the suite, which SALP does not do.
+        raw_region: Any = ctx.extras.get("region_tests") or []
+        region_tests = [str(t) for t in raw_region]
+        scope = "full" if region_tests else "partial"
+        verifiability = 1.0 if region_tests else 0.5
+
         d = self.draft(ctx, "no covering test to describe")
-        d.present("covering_tests", {"tests": tests})
+        d.present("covering_tests", {
+            "tests": tests,
+            "region_tests": region_tests,
+            "coverage_scope": scope,
+            "verifiability": verifiability,
+        })
         d.present(
             "test_entity_mapping",
             {"mappings": [{"test": path, "entity": entity} for path in tests]},
