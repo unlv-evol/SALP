@@ -9,6 +9,8 @@ nothing.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from salp.analyzers import (
@@ -159,12 +161,19 @@ def test_an_unsearchable_target_is_unavailable_not_absent():
 
 
 # --- refactoring --------------------------------------------------------------
+# Shaped as RefactoringMiner actually reports: commits, each with refactorings,
+# each with parallel-ish location arrays.
 _RENAME = {
     "type": "Rename Method",
     "description": "Rename Method save() to persist()",
-    "leftSideLocations": [{"filePath": "core/src/main/java/Wallet.java", "codeElement": "save()"}],
+    "markup": "Rename Method <b>save()</b>",
+    "leftSideLocations": [
+        {"filePath": "core/src/main/java/Wallet.java", "codeElement": "save()",
+         "startLine": 10, "endLine": 12},
+    ],
     "rightSideLocations": [
-        {"filePath": "core/src/main/java/Wallet.java", "codeElement": "persist()"}
+        {"filePath": "core/src/main/java/Wallet.java", "codeElement": "persist()",
+         "startLine": 10, "endLine": 12},
     ],
 }
 _ELSEWHERE = {
@@ -173,26 +182,94 @@ _ELSEWHERE = {
     "leftSideLocations": [{"filePath": "core/src/main/java/Other.java", "codeElement": "a()"}],
     "rightSideLocations": [],
 }
+# 2 left, 1 right: the arrays are not counterparts, which is the case that
+# breaks naive positional pairing.
+_UNCORRELATED = {
+    "type": "Inline Variable",
+    "description": "Inline Variable x in Wallet",
+    "leftSideLocations": [
+        {"filePath": "core/src/main/java/Wallet.java", "codeElement": "x"},
+        {"filePath": "core/src/main/java/Wallet.java", "codeElement": "y"},
+    ],
+    "rightSideLocations": [
+        {"filePath": "core/src/main/java/Wallet.java", "codeElement": "inlined"},
+    ],
+}
+_MOVED = {
+    "type": "Move Class",
+    "description": "Move Class Wallet moved to wallet.core",
+    "leftSideLocations": [{"filePath": "core/src/main/java/Wallet.java", "codeElement": "Wallet"}],
+    "rightSideLocations": [
+        {"filePath": "core/src/main/java/wallet/core/Wallet.java", "codeElement": "Wallet"}
+    ],
+}
+
+
+def _commits(*refactorings: dict) -> tuple[dict, ...]:
+    return ({"sha1": "abc123", "url": "https://example/commit/abc123",
+             "repository": "acme/target", "refactorings": list(refactorings)},)
+
+
+def _ref_ctx(*refactorings: dict) -> AnalysisContext:
+    ctx = _ctx(refactorings=_commits(*refactorings))
+    ctx.target_path = "core/src/main/java/Wallet.java"
+    return ctx
 
 
 def test_refactorings_are_filtered_to_this_file():
-    ctx = _ctx(refactorings=[_RENAME, _ELSEWHERE])
-    ctx.target_path = "core/src/main/java/Wallet.java"
-    ce = RefactoringAnalyzer().investigate(ctx)
-
+    ce = RefactoringAnalyzer().investigate(_ref_ctx(_RENAME, _ELSEWHERE))
     reported = _by_element(ce, "refactorings").attributes["refactorings"]
     assert [r["type"] for r in reported] == ["Rename Method"]
     assert set(_by_element(ce, "affected_entities").attributes["entities"]) == {
         "save()", "persist()"
     }
-    mapping = _by_element(ce, "entity_mappings").attributes["mappings"][0]
-    assert (mapping["source"], mapping["target"]) == ("save()", "persist()")
+
+
+def test_a_one_to_one_refactoring_is_correlated_into_a_mapping():
+    ce = RefactoringAnalyzer().investigate(_ref_ctx(_RENAME))
+    (mapping,) = _by_element(ce, "entity_mappings").attributes["mappings"]
+    assert mapping["correlated"] is True
+    assert mapping["source"]["element"] == "save()"
+    assert mapping["target"]["element"] == "persist()"
+
+
+def test_mismatched_location_arrays_are_not_paired():
+    """Half of a real run has arrays of different lengths; pairing them would
+    assert a correspondence RefactoringMiner never reported."""
+    ce = RefactoringAnalyzer().investigate(_ref_ctx(_UNCORRELATED))
+    mappings = _by_element(ce, "entity_mappings").attributes["mappings"]
+    assert all(m["correlated"] is False for m in mappings)
+    # every location is still reported, just unpaired
+    assert len(mappings) == 3
+    assert {m["source"]["element"] for m in mappings if m["source"]} == {"x", "y"}
+
+
+def test_the_commit_is_retained_for_traceability():
+    ce = RefactoringAnalyzer().investigate(_ref_ctx(_RENAME))
+    (reported,) = _by_element(ce, "refactorings").attributes["refactorings"]
+    assert reported["commit"] == "abc123"
+    assert reported["commit_url"].endswith("abc123")
+    assert reported["markup"]  # RefactoringMiner's highlighted description
+
+
+def test_a_file_level_move_relocates_the_landing_site():
+    """The reference implementation skipped these; for a reusable change they are
+    the most consequential refactorings there are."""
+    ce = RefactoringAnalyzer().investigate(_ref_ctx(_MOVED))
+    (reported,) = _by_element(ce, "refactorings").attributes["refactorings"]
+    assert reported["relocates_landing_site"] is True
+    (edge,) = _by_element(ce, "refactoring_change_relation").attributes["relationships"]
+    assert edge["rel"] == "landing_site_relocated_by"
 
 
 def test_a_completed_run_touching_nothing_is_verified_absent():
-    ctx = _ctx(refactorings=[_ELSEWHERE])
-    ctx.target_path = "core/src/main/java/Wallet.java"
-    ce = RefactoringAnalyzer().investigate(ctx)
+    ce = RefactoringAnalyzer().investigate(_ref_ctx(_ELSEWHERE))
+    assert all(e.state is EvidenceState.VERIFIED_ABSENT for e in ce.elements)
+
+
+def test_no_drift_between_the_pinned_states_is_verified_absent():
+    """An empty report is an absence of refactoring, not an absence of evidence."""
+    ce = RefactoringAnalyzer().investigate(_ctx(refactorings=()))
     assert all(e.state is EvidenceState.VERIFIED_ABSENT for e in ce.elements)
 
 
@@ -206,3 +283,57 @@ def test_a_failed_run_reports_its_own_diagnostic():
     ce = RefactoringAnalyzer().investigate(_ctx(refactorings="RefactoringMiner exited 1: boom"))
     assert all(e.state is EvidenceState.UNAVAILABLE for e in ce.elements)
     assert "boom" in ce.elements[0].provenance.diagnostics
+
+
+def test_the_installed_distribution_version_is_recorded():
+    from salp.analyzers.tools import refactoring_miner_version
+
+    dist = Path("tools/refactoringminer/RefactoringMiner-3.1.4/bin/RefactoringMiner")
+    assert refactoring_miner_version(dist) == "3.1.4"
+    assert refactoring_miner_version(None) is None
+
+
+# --- tool versions in provenance ----------------------------------------------
+def test_tool_backed_analyzers_record_the_version_in_use():
+    """Evidence is reproducible only under fixed tool versions.
+
+    The version is resolved from the installed tool rather than hardcoded, so it
+    cannot drift from what actually produced the evidence.
+    """
+    from salp.analyzers import (
+        CompatibilityAnalyzer,
+        StructuralAnalyzer,
+        SurroundingAnalyzer,
+        VerificationAnalyzer,
+    )
+    from salp.analyzers.tools import git_version, tree_sitter_version
+
+    expected = {
+        StructuralAnalyzer: tree_sitter_version(),
+        SurroundingAnalyzer: tree_sitter_version(),
+        CompatibilityAnalyzer: tree_sitter_version(),
+        VerificationAnalyzer: git_version(),
+    }
+    for analyzer_cls, version in expected.items():
+        assert analyzer_cls().tool_version() == version, analyzer_cls.__name__
+
+
+@pytestmark_ts
+def test_the_recorded_version_reaches_the_evidence_object():
+    from salp.analyzers.tools import tree_sitter_version
+
+    ce = CompatibilityAnalyzer().investigate(_ctx(target_dependencies=[]))
+    versions = {e.provenance.analysis_version for e in ce.elements if e.provenance}
+    assert versions == {tree_sitter_version()}
+    assert None not in versions
+
+
+def test_refactoringminer_version_comes_from_a_version_file(tmp_path):
+    from salp.analyzers.tools import refactoring_miner_version
+
+    jar = tmp_path / "RefactoringMiner.jar"
+    jar.write_text("")
+    assert refactoring_miner_version(jar) is None  # no VERSION file yet
+    (tmp_path / "VERSION").write_text("3.0.9\n")
+    assert refactoring_miner_version(tmp_path / "other.jar") == "3.0.9"
+    assert refactoring_miner_version(None) is None

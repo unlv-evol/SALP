@@ -299,3 +299,4 @@ tools/**
 # Pipeline output
 /out/
 data/out/
+.refactoring-cache/

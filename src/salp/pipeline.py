@@ -214,12 +214,18 @@ def run(config: Config) -> int:
             pr.metadata.target_repo,
             pr.metadata.divergence_timestamp or pr.metadata.divergence_date,
         )
-        refactorings = run_refactoring_miner(
-            config.tools.refactoringminer_jar,
-            repo_dir(config.paths.repo_cache, pr.metadata.target_repo or ""),
-            divergence_pin.commit if divergence_pin else None,
-            target_pin.commit if target_pin else None,
-        )
+        refactorings: tuple[dict[str, object], ...] | str
+        if not config.detect_refactorings:
+            refactorings = "refactoring detection disabled (detect_refactorings=false)"
+        else:
+            refactorings = run_refactoring_miner(
+                config.tools.refactoringminer_jar,
+                repo_dir(config.paths.repo_cache, pr.metadata.target_repo or ""),
+                divergence_pin.commit if divergence_pin else None,
+                target_pin.commit if target_pin else None,
+                config.paths.repo_cache / ".refactoring-cache",
+                config.tools.refactoringminer_timeout,
+            )
 
         for gf in pr.mo_files:
             stem = Path(gf.display_name).stem or gf.name
@@ -233,6 +239,7 @@ def run(config: Config) -> int:
                 target_pin=target_pin,
                 cache_dir=config.paths.repo_cache,
                 refactorings=refactorings,
+                refactoringminer_jar=config.tools.refactoringminer_jar,
             )
 
             errors = validate_sap(sap)

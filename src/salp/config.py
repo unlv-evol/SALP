@@ -32,6 +32,9 @@ class Tools(BaseModel):
 
     refactoringminer_jar: Path | None = None
     tree_sitter_lib: Path | None = None
+    # RefactoringMiner cost tracks repository size as much as commit count; a
+    # slow repository is bounded rather than allowed to hang a run.
+    refactoringminer_timeout: int = 900
 
 
 class Config(BaseModel):
@@ -42,6 +45,9 @@ class Config(BaseModel):
     # Resolve repository-state pins against the local clone cache. Disabling
     # leaves every pin date-based, which lowers Fidelity but never fails a run.
     resolve_pins: bool = True
+    # Refactoring detection is the most expensive analysis; disabling it leaves
+    # the category UNAVAILABLE with a diagnostic rather than skipping it.
+    detect_refactorings: bool = True
 
     @classmethod
     def load(cls, path: str | Path | None) -> Config:
