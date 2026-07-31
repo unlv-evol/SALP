@@ -27,6 +27,13 @@ All notable changes to this project are documented here, following
   pinned states; **verification evidence** from target-side test discovery;
   **refactoring evidence** via RefactoringMiner when configured.
 - Project infrastructure: CI, pre-commit, contributing guide, coverage config.
+- `NOT_APPLICABLE` evidence state, removed from both the Coverage and the
+  Fidelity denominator, so a standalone-artifact change is not capped by
+  categories it structurally cannot have.
+- Standalone-artifact and artifact-placement analyzers.
+- Schema conformance of the *written* package (`salp validate`), gated in CI
+  alongside an artifact-generation check.
+- Tool versions recorded in evidence provenance.
 
 ### Fixed
 
@@ -45,6 +52,9 @@ All notable changes to this project are documented here, following
 - Evidence output was not reproducible: nested constructs share a start point, so
   sorting on it alone left ties to capture order.
 - The surrounding analyzer parsed non-Java files with the Java grammar.
+- Refactoring results correlated left and right locations by index
+  unconditionally; on a real run half the reports have arrays of different
+  lengths, so pairing is now applied only where it holds.
 
 ### Changed
 

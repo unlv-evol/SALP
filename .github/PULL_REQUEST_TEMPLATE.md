@@ -3,9 +3,25 @@ Thanks for contributing. Delete any section that does not apply — a short,
 accurate PR beats a long template filled in for its own sake.
 -->
 
-## What and why
+## Implemented component
 
-<!-- What changes, and what problem it solves. Link the issue: Closes #123 -->
+<!-- The component or feature completed, e.g. "Verification Evidence",
+     "SAP Characterization". Link the issue: Closes #123 -->
+
+## Specification requirements addressed
+
+<!--
+Sections of the SAP Design Specification and the Implementation & Onboarding
+Guide this implements, so the work is traceable to what required it.
+e.g. Design Spec §5 (Evidence Representation); Onboarding Guide §13.
+-->
+
+## SAP fields produced or modified
+
+<!--
+Which evidence categories, required elements, schema fields, or characterization
+fields this adds or changes. Write "none" for tooling or docs.
+-->
 
 ## Type of change
 
@@ -37,6 +53,10 @@ Categories whose evidence states changed, and why:
 
 - [ ] The category is built through `self.draft(...)`, so every required element
       carries an explicit outcome
+- [ ] The evidence state is the right one of the four — in particular
+      `NOT_APPLICABLE` (leaves both denominators) is not used where
+      `VERIFIED_ABSENT` (credited to Coverage) is meant
+- [ ] `tool_version()` reports the version actually installed
 - [ ] A completed investigation that found nothing returns `VERIFIED_ABSENT`, not
       `UNAVAILABLE` — and an investigation that could not run returns
       `UNAVAILABLE`, not `VERIFIED_ABSENT`
@@ -56,7 +76,10 @@ Categories whose evidence states changed, and why:
 - [ ] Dependencies run one way: `models` → `ingest`/`repos`/`structural` →
       `analyzers` → `characterization`/`packaging` → `pipeline`
 
-## Testing
+## Tests added
+
+<!-- Which suites: unit, integration, schema-validation, evidence-state,
+     characterization, regression, end-to-end. -->
 
 - [ ] `make check` passes (ruff, mypy, pytest)
 - [ ] New behaviour has a test that fails without the change
@@ -65,9 +88,34 @@ Categories whose evidence states changed, and why:
 
 <!-- If you verified against a real sample, say which repositories and PRs. -->
 
+## Known limitations
+
+<!--
+Incomplete functionality, assumptions, constraints, temporary workarounds, or
+planned follow-ups a reviewer should know about. Write "none" if there are none.
+-->
+
+## AI-assisted development
+
+<!--
+If AI-assisted tools (Claude Code, Copilot, Codex, …) were used substantially for
+code generation, testing, or debugging, disclose it here and say what for.
+Write "none" otherwise.
+-->
+
 ## Documentation
 
 - [ ] README / CONTRIBUTING updated if the layout, commands, or numbers changed
 - [ ] `CHANGELOG.md` updated under `[Unreleased]`
 - [ ] Code adapted from elsewhere is recorded in `docs/adoption/`, including any
       behaviour that was deliberately changed
+
+## Reviewer checklist
+
+- [ ] The implementation satisfies the referenced requirements
+- [ ] It conforms to the SAP Design Specification and the Onboarding Guide
+- [ ] Evidence objects are correctly constructed, with provenance and diagnostics
+- [ ] The generated SAP representations are correct
+- [ ] Tests are adequate and pass
+- [ ] Documentation is updated
+- [ ] No unresolved issues prevent merging

@@ -22,15 +22,36 @@ Detects the structural evolution between the pinned source and target states:
 renames, extractions, moves, inlining, signature changes. Feeds
 `refactorings.json` (`Category.REFACTORING`, weight 2, semantic support).
 
-Install the release JAR, or build from source, and record the version — it goes
-into evidence provenance as `analysis_version`, so results stay reproducible as
-the tool evolves:
+Unpack the official release here. It is a *distribution* — a launcher script
+plus a `lib/` directory — not a single fat jar, so point the config at the
+launcher:
 
 ```
 tools/refactoringminer/
-  RefactoringMiner.jar
-  VERSION            # e.g. 3.0.9 — recorded in provenance
+  RefactoringMiner-3.1.4/
+    bin/RefactoringMiner     <- tools.refactoringminer_jar points here
+    lib/*.jar
 ```
+
+The version is read from the distribution directory name and recorded in
+evidence provenance as `analysis_version`, so results stay reproducible as the
+tool evolves. A `VERSION` file beside the launcher overrides it, for builds laid
+out differently.
+
+Requires Java on `PATH` (17+ for 3.1.4).
+
+**It is the slowest analysis in the pipeline, by a wide margin.** Cost tracks
+repository size as much as commit count, so a modest range over a large
+repository can run for many minutes. Three controls:
+
+| Control | Effect |
+| --- | --- |
+| `tools.refactoringminer_timeout` | seconds before one repository is abandoned (default 900) |
+| `detect_refactorings: false`, or `salp run --no-refactorings` | skip it; the category becomes UNAVAILABLE with a diagnostic |
+| `data/repos/.refactoring-cache/` | results are cached per (repo, start, end), so only the first run over a range pays |
+
+A timed-out or skipped analysis is an information gap, never a failure: the run
+continues and the category records why.
 
 When a run completes and finds no relevant refactoring, the analyzer must emit
 `VERIFIED_ABSENT`, **not** `UNAVAILABLE`. That distinction is load-bearing:
