@@ -14,6 +14,7 @@ from salp.characterization.levels import (
 from salp.models import (
     DEFAULT_SPECS,
     FOUNDATIONAL_SETS,
+    REQUIRED_SETS,
     Category,
     CategoryEvidence,
     CategorySpec,
@@ -31,14 +32,26 @@ _FID_MID = 0.75  # foundational Fidelity moderate cutoff
 
 
 class CategoryScore(BaseModel):
+    """Per-category result.
+
+    ``coverage`` is None when every element is NOT_APPLICABLE -- the category is
+    removed from the Coverage denominator rather than scored zero. ``fidelity``
+    is None when no element is PRESENT, which is undefined rather than zero.
+    """
+
     category: Category
-    coverage: float | None = None  # None if category not required-for-coverage / N/A
-    fidelity: float | None = None  # None if no PRESENT element (undefined)
+    coverage: float | None = None
+    fidelity: float | None = None
     n_elements: int = 0
     present: int = 0
     verified_absent: int = 0
     unavailable: int = 0
+    not_applicable: int = 0
     blocking_conflict: bool = False
+
+    @property
+    def is_applicable(self) -> bool:
+        return self.coverage is not None
 
 
 class CharacterizationProfile(BaseModel):
@@ -68,27 +81,29 @@ class CharacterizationProfile(BaseModel):
         return level.name if level is not None else None
 
 
-def _cov(state: EvidenceState) -> float:
-    return 0.0 if state is EvidenceState.UNAVAILABLE else 1.0
-
-
 def _score_category(ce: CategoryEvidence) -> CategoryScore:
-    present = [e for e in ce.elements if e.state is EvidenceState.PRESENT]
-    va = [e for e in ce.elements if e.state is EvidenceState.VERIFIED_ABSENT]
-    un = [e for e in ce.elements if e.state is EvidenceState.UNAVAILABLE]
-    n = len(ce.elements)
+    """Score one category: C_i = 1 - |U_i| / m_i, and F_i over PRESENT only.
 
-    coverage = (sum(_cov(e.state) for e in ce.elements) / n) if n else 0.0
+    NOT_APPLICABLE elements are removed from ``m_i`` rather than counted as
+    resolved or unresolved. A category whose elements are all NOT_APPLICABLE has
+    no Coverage at all, and drops out of the aggregate.
+    """
+    by = {s: [e for e in ce.elements if e.state is s] for s in EvidenceState}
+    present = by[EvidenceState.PRESENT]
+    applicable = len(ce.elements) - len(by[EvidenceState.NOT_APPLICABLE])
+
+    coverage = (1.0 - len(by[EvidenceState.UNAVAILABLE]) / applicable) if applicable else None
     fidelity = (sum(e.representation for e in present) / len(present)) if present else None
 
     return CategoryScore(
         category=ce.category,
         coverage=coverage,
         fidelity=fidelity,
-        n_elements=n,
+        n_elements=len(ce.elements),
         present=len(present),
-        verified_absent=len(va),
-        unavailable=len(un),
+        verified_absent=len(by[EvidenceState.VERIFIED_ABSENT]),
+        unavailable=len(by[EvidenceState.UNAVAILABLE]),
+        not_applicable=len(by[EvidenceState.NOT_APPLICABLE]),
         blocking_conflict=any(e.blocking_conflict for e in ce.elements),
     )
 
@@ -110,7 +125,7 @@ class Characterizer:
         cat_scores = {c: _score_category(ce) for c, ce in categories.items()}
 
         coverage = self._coverage(cat_scores, change_type)
-        fidelity = self._fidelity(cat_scores)
+        fidelity = self._fidelity(cat_scores, change_type)
         base = self._readiness_base(coverage, fidelity)
         prelim = ReadinessLevel.from_score(base)
 
@@ -134,22 +149,34 @@ class Characterizer:
             category_scores={c.value: s for c, s in cat_scores.items()},
         )
 
-    # --- Coverage: weighted mean over *required*, applicable categories ---------
+    # --- Coverage: weighted mean over required, applicable categories ----------
     def _coverage(self, scores: dict[Category, CategoryScore], ct: ChangeType) -> float:
+        """Aggregate over the categories required for this change type.
+
+        Optional and NOT_APPLICABLE categories never enter the denominator.
+        """
+        required = REQUIRED_SETS.get(ct, frozenset())
         num = den = 0.0
         for cat, s in scores.items():
-            spec = self.specs[cat]
-            if not spec.is_required_for_coverage or ct not in spec.applicable_to:
+            if cat not in required or not s.is_applicable:
                 continue
-            num += spec.weight * (s.coverage or 0.0)
-            den += spec.weight
+            num += self.specs[cat].weight * (s.coverage or 0.0)
+            den += self.specs[cat].weight
         return num / den if den else 0.0
 
     # --- Fidelity: weighted mean over categories with >= 1 PRESENT element ------
-    def _fidelity(self, scores: dict[Category, CategoryScore]) -> float | None:
+    def _fidelity(self, scores: dict[Category, CategoryScore], ct: ChangeType) -> float | None:
+        """Aggregate over D = { i : |P_i| > 0 }, excluding inapplicable categories.
+
+        A NOT_APPLICABLE category has no PRESENT element and so is already
+        excluded; the applicability check additionally guards against an analyzer
+        that recovered evidence for a category this change type does not have.
+        """
         num = den = 0.0
         for cat, s in scores.items():
-            if s.fidelity is None:  # no PRESENT element -> excluded
+            if s.fidelity is None or not s.is_applicable:
+                continue
+            if ct not in self.specs[cat].applicable_to:
                 continue
             w = self.specs[cat].weight
             num += w * s.fidelity
@@ -195,6 +222,10 @@ class Characterizer:
             s = scores.get(cat)
             if s is None:
                 lower(ReadinessLevel.LOW, f"foundational_missing:{cat.value}")
+                continue
+            if not s.is_applicable:
+                # A foundational category the change type does not have cannot
+                # constrain it; the change-type profile already excluded it.
                 continue
             # 1: any UNAVAILABLE foundational element.
             if s.unavailable > 0:

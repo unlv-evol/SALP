@@ -12,11 +12,26 @@ class EvidenceState(StrEnum):
 
     These states are mutually exclusive and must never be omitted: an
     investigation that produced no result is recorded explicitly, not dropped.
+    Each behaves differently under characterization:
+
+    ==================  ========  ========
+    state               Coverage  Fidelity
+    ==================  ========  ========
+    PRESENT             resolved  scored
+    VERIFIED_ABSENT     resolved  excluded
+    UNAVAILABLE         0         excluded
+    NOT_APPLICABLE      excluded  excluded
+    ==================  ========  ========
     """
 
     PRESENT = "PRESENT"  # investigation completed and recovered valid evidence
     VERIFIED_ABSENT = "VERIFIED_ABSENT"  # completed; confirmed no applicable evidence
     UNAVAILABLE = "UNAVAILABLE"  # could not determine (failure/unsupported/missing input)
+    # The category does not apply to this change type at all. Excluded from
+    # *both* Coverage and Fidelity -- removed from both denominators rather than
+    # scored zero, which is what distinguishes it from UNAVAILABLE, and credited
+    # to nothing, which distinguishes it from VERIFIED_ABSENT.
+    NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
 class RepositoryStatePin(BaseModel):

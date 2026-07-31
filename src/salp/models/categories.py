@@ -30,7 +30,11 @@ class Category(StrEnum):
     COMPATIBILITY = "compatibility"
     VERIFICATION = "verification"
     SURROUNDING = "surrounding"
+    # Source-side standalone-artifact identity (c_artifact-source).
     STANDALONE = "standalone"
+    # Verified target-repository placement of a standalone artifact
+    # (c_artifact-placement). Applies only to a standalone-artifact change.
+    ARTIFACT_PLACEMENT = "artifact_placement"
 
 
 class CategorySpec(BaseModel):
@@ -89,6 +93,33 @@ DEFAULT_SPECS: dict[Category, CategorySpec] = {
     Category.STANDALONE: CategorySpec(
         category=Category.STANDALONE, weight=1,
         requirement=RequirementLevel.CONDITIONAL, applicable_to=_ALL),
+    Category.ARTIFACT_PLACEMENT: CategorySpec(
+        category=Category.ARTIFACT_PLACEMENT, weight=3,
+        requirement=RequirementLevel.FOUNDATIONAL, applicable_to=_STANDALONE),
+}
+
+# Categories entering the Coverage denominator, per change type. Held as data
+# rather than derived from `requirement`, because a category's level depends on
+# the change type: standalone-artifact identity is supplementary to a mapped
+# change but foundational to a standalone one.
+REQUIRED_SETS: dict[ChangeType, frozenset[Category]] = {
+    ChangeType.MAPPED: frozenset({
+        Category.SOURCE_CHANGE,
+        Category.TARGET_LOCALIZATION,
+        Category.FUNCTION_TRANSFORMATION,
+        Category.STRUCTURAL,
+        Category.REFACTORING,
+        Category.COMPATIBILITY,
+        Category.VERIFICATION,
+    }),
+    ChangeType.STANDALONE: frozenset({
+        Category.SOURCE_CHANGE,
+        Category.STANDALONE,
+        Category.ARTIFACT_PLACEMENT,
+        Category.STRUCTURAL,
+        Category.COMPATIBILITY,
+        Category.VERIFICATION,
+    }),
 }
 
 
@@ -99,9 +130,13 @@ FOUNDATIONAL_SETS: dict[ChangeType, frozenset[Category]] = {
         Category.TARGET_LOCALIZATION,
         Category.FUNCTION_TRANSFORMATION,
     }),
+    # A standalone artifact has no Transformation Unit, so the foundational set
+    # is its source-side identity and its verified target placement. Function
+    # transformation and target-function localization are NOT_APPLICABLE, which
+    # is what allows a well-formed standalone SAP to reach High Readiness.
     ChangeType.STANDALONE: frozenset({
-        Category.SOURCE_CHANGE,  # artifact-source identity
-        # target placement is modelled via TARGET_LOCALIZATION reused for artifacts
+        Category.STANDALONE,
+        Category.ARTIFACT_PLACEMENT,
     }),
 }
 

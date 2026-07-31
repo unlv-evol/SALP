@@ -175,6 +175,21 @@ _STANDALONE = (
 )
 
 
+# --- Artifact Placement (standalone change type) -----------------------------
+_ARTIFACT_PLACEMENT = (
+    _e("target_repo_revision", "target repository and revision identifiers",
+       "repo", "revision"),
+    _e("target_location", "the verified path the artifact takes in the target",
+       "target_path"),
+    _e("placement_basis", "why that location is the correct one",
+       "basis", "existing_siblings"),
+    _e("conflicting_artifact", "any target artifact already occupying the location",
+       "conflict"),
+    _e("placement_provenance", "placement-analysis provenance and diagnostics",
+       "analysis_component", "input_artifacts"),
+)
+
+
 CATEGORY_ELEMENTS: dict[Category, tuple[ElementSpec, ...]] = {
     Category.SOURCE_CHANGE: _SOURCE_CHANGE,
     Category.TARGET_LOCALIZATION: _TARGET_LOCALIZATION,
@@ -185,6 +200,7 @@ CATEGORY_ELEMENTS: dict[Category, tuple[ElementSpec, ...]] = {
     Category.VERIFICATION: _VERIFICATION,
     Category.SURROUNDING: _SURROUNDING,
     Category.STANDALONE: _STANDALONE,
+    Category.ARTIFACT_PLACEMENT: _ARTIFACT_PLACEMENT,
 }
 
 
