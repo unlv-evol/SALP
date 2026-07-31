@@ -4,6 +4,12 @@ from salp.packaging.builder import (
     build_sap,
     function_ids,
 )
+from salp.packaging.schema import (
+    Report,
+    validate_output,
+    validate_pr_dir,
+    validate_sap_dir,
+)
 from salp.packaging.validation import (
     validate_sap,
 )
@@ -17,6 +23,10 @@ from salp.packaging.writer import (
 )
 
 __all__ = [
+    "Report",
+    "validate_output",
+    "validate_pr_dir",
+    "validate_sap_dir",
     "build_sap",
     "category_confidence",
     "category_state",
