@@ -24,6 +24,44 @@ class FunctionPayload(BaseModel):
     has_ast: bool = False
     has_structure: bool = False
 
+    # The signature the three payloads are about, and how the target side was
+    # matched to it. Recorded because a payload that is a diff region or a whole
+    # file is a weaker recovery than a function, and must say so rather than
+    # being read as the function it stands in for.
+    signature: str | None = None
+    method_name: str | None = None
+    target_signature: str | None = None
+    target_match_kind: str | None = None
+    target_diagnostics: str | None = None
+    source_before_is_region: bool = False
+    source_after_is_region: bool = False
+    target_is_whole_file: bool = False
+    # Why no enclosing function was found, when none was. Set from the reason
+    # constants in `packaging.builder`.
+    no_function_reason: str | None = None
+
+    @property
+    def has_no_function_by_construction(self) -> bool:
+        """Whether the change has no function to transform, rather than one we missed.
+
+        True only where the file parsed and the edit region provably sits outside
+        every method. A file that could not be read or parsed might have a
+        function that was simply never reached, which is a gap, not an absence.
+        """
+        return self.no_function_reason in {"import_region", "outside_any_method"}
+
+    @property
+    def has_source_before_function(self) -> bool:
+        return self.has_source_before and not self.source_before_is_region
+
+    @property
+    def has_source_after_function(self) -> bool:
+        return self.has_source_after and not self.source_after_is_region
+
+    @property
+    def has_target_function(self) -> bool:
+        return self.has_target and not self.target_is_whole_file
+
     @property
     def dir_ref(self) -> str:
         return f"functions/{self.fn_id}"

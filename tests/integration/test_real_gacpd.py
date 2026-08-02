@@ -17,6 +17,7 @@ from salp.config import Config
 from salp.ingest import discover_pull_requests
 from salp.packaging import validate_sap
 from salp.pipeline import run
+from salp.structural import grammar_for
 
 DATA = Path(__file__).resolve().parents[2] / "data" / "gacpd"
 
@@ -129,11 +130,71 @@ def test_pure_deletion_hunk_recovers_its_post_change_side(output):
     sap_dir = output / "langerhansDogecoinjNew-bitcoinjBitcoinj" / "PR-2731" / "sap-WalletFiles"
     if not sap_dir.is_dir():
         pytest.skip("PR 2731 not in the sample")
+    doc = json.loads((sap_dir / "hunks" / "H-1" / "edit_region.json").read_text())
+    post = next(e for e in doc["elements"] if e["element"].endswith("post_change_function"))
+    assert post["state"] == "PRESENT", "the omitted side must be reconstructed from the diff"
+    assert (sap_dir / post["attributes"]["payload_ref"]).is_file()
+
+
+def test_an_import_region_edit_has_no_function_transformation(output):
+    """WalletFiles H-1 edits the import block, which has no enclosing function.
+
+    tau is undefined there rather than unrecovered, so it must be NOT_APPLICABLE
+    -- which leaves both denominators -- and not UNAVAILABLE, which would score
+    the hunk down for evidence it structurally cannot have.
+    """
+    sap_dir = output / "langerhansDogecoinjNew-bitcoinjBitcoinj" / "PR-2731" / "sap-WalletFiles"
+    if not sap_dir.is_dir():
+        pytest.skip("PR 2731 not in the sample")
     doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
     unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
-    assert unit["state"] == "PRESENT"
-    assert unit["representation"] == 1.0, "tau must be complete once the side is reconstructed"
-    assert "reconstructed from the hunk diff" in unit["attributes"]["derivation"]
+    assert unit["state"] == "NOT_APPLICABLE"
+    assert "import block" in unit["provenance"]["diagnostics"]
+
+
+def test_tau_is_three_functions_not_regions_or_files(output):
+    """Every member of a recovered tau must be a function body.
+
+    f_s and f'_s were hunk regions in diff syntax and f_t was the whole enclosing
+    file; none of the three was what the specification asks for.
+    """
+    checked = 0
+    for path in sorted(output.glob("*/PR-*/sap-*/hunks/*/transformation.json")):
+        doc = json.loads(path.read_text())
+        unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
+        if unit["state"] != "PRESENT":
+            continue
+        sap_dir = path.parent.parent.parent
+        for member in ("f_s_before", "f_s_after", "f_t"):
+            ref = unit["attributes"].get(member)
+            if ref is None:
+                continue
+            text = (sap_dir / ref).read_text()
+            assert not text.lstrip().startswith("@@"), f"{path}: {member} is a diff region"
+            assert "\n-" not in text and "\n+" not in text, f"{path}: {member} carries diff markers"
+            assert "package " not in text.split("\n", 1)[0], f"{path}: {member} is a whole file"
+            checked += 1
+    assert checked, "no complete transformation unit was produced"
+
+
+def test_the_target_function_is_matched_by_signature_not_line_number(output):
+    """f_t must be the counterpart of f_s, not whatever occupies the same lines.
+
+    Reusing the source's line span against a diverged variant resolved `saveNow`
+    to `saveNowInternal` and reported it PRESENT.
+    """
+    for path in sorted(output.glob("*/PR-*/sap-*/functions/*/structure.json")):
+        elements = {
+            e["object_id"].split(":")[-1]: e for e in json.loads(path.read_text())["elements"]
+        }
+        source = elements.get("source_structure", {}).get("attributes") or {}
+        target = elements.get("target_structure", {})
+        if not source.get("method") or target.get("state") != "PRESENT":
+            continue
+        attributes = target["attributes"]
+        assert attributes["match_kind"] is not None, path
+        if attributes["match_kind"] == "signature":
+            assert attributes["method"] == source["method"], path
 
 
 def test_every_sap_is_valid_and_every_reference_resolves(output):
@@ -174,44 +235,88 @@ def test_context_files_referenced_by_the_manifest_exist(output):
 
 # --- characterization ---------------------------------------------------------
 def test_enrichment_raises_readiness_for_parseable_files(output):
-    """With structure, compatibility, and verification recovered, Java SAPs reach High.
+    """With structure, compatibility, and verification recovered, SAPs reach High.
 
-    Scala files have no configured grammar, so their enrichment categories stay
-    UNAVAILABLE and they cap lower -- an explicit gap, not a silent skip.
+    Partitioned by whether a grammar is installed for the language, not by file
+    extension: Scala is a supported language now, and a SAP that reaches High
+    does so because its evidence was recovered, not because of what it is called.
+    A language with no grammar keeps its enrichment categories UNAVAILABLE and
+    caps lower -- an explicit gap, not a silent skip.
     """
     profiles = sorted(output.glob("*/PR-*/sap-*/characterization.json"))
     assert profiles
 
     levels = {"LOW": 0, "MODERATE": 1, "HIGH": 2}
-    java_saps, other = [], []
+    parseable, unparseable = [], []
     for path in profiles:
         profile = json.loads(path.read_text())
         manifest = json.loads((path.parent / "sap.json").read_text())
-        (java_saps if manifest["source_file"].endswith(".java") else other).append(
-            (path.parent.name, profile)
-        )
+        ext = manifest["source_file"].rsplit(".", 1)[-1]
+        target = parseable if grammar_for(ext) is not None else unparseable
+        target.append((path.parent.name, profile))
 
-    assert java_saps, "the sample should contain Java SAPs"
-    for name, profile in java_saps:
+    assert parseable, "the sample should contain SAPs in a supported language"
+    for name, profile in parseable:
         assert profile["aggregate"]["readiness"] == "HIGH", name
         for hunk_id, hunk in profile["hunks"].items():
             assert hunk["applied_constraints"] == [], f"{name}/{hunk_id}"
             assert hunk["coverage_score"] > 0.8, f"{name}/{hunk_id}"
 
-    for name, profile in other:
+    for name, profile in unparseable:
         # unrecoverable enrichment must lower Readiness, not be ignored
         assert levels[profile["aggregate"]["readiness"]] < levels["HIGH"], name
 
 
+def test_scala_is_parsed_by_its_own_grammar(output):
+    """The Scala SAPs must carry real structural evidence, not an explicit gap.
+
+    Before the Scala grammar was configured these reported UNAVAILABLE for every
+    enrichment category and capped below High. Their structure now has to name a
+    Scala construct -- a `def`, which Java has no syntax for -- so a regression to
+    parsing them as Java could not pass.
+    """
+    scala = [
+        p for p in sorted(output.glob("*/PR-*/sap-*"))
+        if json.loads((p / "sap.json").read_text())["source_file"].endswith(".scala")
+    ]
+    if not scala:
+        pytest.skip("no Scala file in the sample")
+
+    named = 0
+    for sap_dir in scala:
+        for path in sorted(sap_dir.glob("functions/*/structure.json")):
+            elements = {
+                e["object_id"].split(":")[-1]: e
+                for e in json.loads(path.read_text())["elements"]
+            }
+            source = elements["source_structure"]
+            assert source["state"] == "PRESENT", path
+            method = (source["attributes"] or {}).get("method")
+            if method:
+                assert "def " in method, f"{path}: {method!r} is not a Scala definition"
+                named += 1
+    assert named, "no Scala method signature was recovered"
+
+
 def test_foundational_categories_are_complete_everywhere(output):
+    """Java SAPs must carry complete foundational evidence.
+
+    tau needs a grammar to slice a function out of a file, so a language with no
+    tree-sitter grammar configured -- Scala, here -- leaves
+    ``function_transformation`` short. That is a real shortfall and stays
+    UNAVAILABLE rather than being excused, so the assertion is scoped to the
+    languages the pipeline can actually parse.
+    """
     for path in sorted(output.glob("*/PR-*/sap-*/characterization.json")):
+        manifest = json.loads((path.parent / "sap.json").read_text())
         profile = json.loads(path.read_text())
+        foundational = ["source_change", "target_localization"]
+        if manifest["source_file"].endswith(".java"):
+            foundational.append("function_transformation")
         for hunk_id, hunk in profile["hunks"].items():
-            for foundational in (
-                "source_change", "target_localization", "function_transformation"
-            ):
-                assert hunk["category_scores"][foundational]["coverage"] == 1.0, (
-                    f"{path.parent.name}/{hunk_id}/{foundational}"
+            for category in foundational:
+                assert hunk["category_scores"][category]["coverage"] == 1.0, (
+                    f"{path.parent.name}/{hunk_id}/{category}"
                 )
 
 

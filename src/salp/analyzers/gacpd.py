@@ -86,10 +86,23 @@ class TargetLocalizationAnalyzer(Analyzer):
             {"repo": ctx.target_repo, "revision": pin.commit if pin else None},
             pin=pin,
         )
+        # "method" is a required field, so a payload that is only the enclosing
+        # file scores 0.5 under the uniform rule. Recovering the file a target
+        # function lives in is genuine partial evidence, but it is not f_t.
+        fn = ctx.function
+        target_ref = f"functions/{ctx.fn_id}/target.{ctx.ext}"
         d.present(
             "localized_target_function",
-            {"payload_ref": f"functions/{ctx.fn_id}/target.{ctx.ext}"},
-            payload_ref=f"functions/{ctx.fn_id}/target.{ctx.ext}",
+            {
+                "payload_ref": target_ref if fn is None or fn.has_target else None,
+                "method": fn.target_signature if fn and fn.has_target_function else None,
+                "match_kind": fn.target_match_kind if fn else None,
+                "diagnostics": (
+                    fn.target_diagnostics or "payload is the enclosing file, not the function"
+                    if fn and fn.target_is_whole_file else None
+                ),
+            },
+            payload_ref=target_ref,
         )
         d.present("target_file_location", {"target_file": ctx.target_path})
         d.present(
@@ -134,17 +147,65 @@ class TransformationAnalyzer(Analyzer):
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         d = self.draft(ctx, "not produced by GACPD")
         base = f"functions/{ctx.fn_id}"
+        fn = ctx.function
         # tau is scored component-wise: recovering two of its three parts is a
-        # partially represented unit, not a failed investigation.
-        d.present(
-            "transformation_unit",
-            {
-                "f_s_before": f"{base}/source.before.{ctx.ext}" if ctx.source_before else None,
-                "f_s_after": f"{base}/source.after.{ctx.ext}" if ctx.source_after else None,
-                "f_t": f"{base}/target.{ctx.ext}" if ctx.target_path else None,
-                "derivation": ctx.extras.get("derivation_note"),
-            },
+        # partially represented unit, not a failed investigation. A member counts
+        # only when the payload really is a function -- a diff region or a whole
+        # file is a stand-in, and is reported in `approximated` instead.
+        approximated = [
+            name for name, stands_in in (
+                ("f_s_before", fn.source_before_is_region if fn else False),
+                ("f_s_after", fn.source_after_is_region if fn else False),
+                ("f_t", fn.target_is_whole_file if fn else False),
+            ) if stands_in
+        ]
+        recovered_nothing = fn is not None and not (
+            fn.has_source_before_function
+            or fn.has_source_after_function
+            or fn.has_target_function
         )
+        if recovered_nothing and fn is not None and fn.has_no_function_by_construction:
+            # The file parsed and the edit region sits outside every method -- an
+            # import block, a class parameter list. There is no function to
+            # transform, so tau is not missing here, it does not apply, and it
+            # leaves both denominators instead of scoring zero.
+            where = (
+                "in the import block" if fn.no_function_reason == "import_region"
+                else "outside any method"
+            )
+            d.not_applicable(
+                "transformation_unit",
+                f"the edit region lies {where}, so it has no enclosing function; "
+                "tau is undefined for this change rather than unrecovered",
+            )
+        elif recovered_nothing and fn is not None:
+            # Every member is a stand-in, so tau was not recovered at all. The
+            # diagnostic names the fix rather than leaving a bare zero.
+            d.unavailable(
+                "transformation_unit",
+                "no member of tau could be resolved to a function body "
+                f"({fn.no_function_reason}); GACPD supplies hunk regions and a whole "
+                "target file. Clone the repositories with `salp fetch-repos` and "
+                "install the `structural` extra.",
+            )
+        else:
+            d.present(
+                "transformation_unit",
+                {
+                    "f_s_before": (
+                        f"{base}/source.before.{ctx.ext}"
+                        if fn and fn.has_source_before_function else None
+                    ),
+                    "f_s_after": (
+                        f"{base}/source.after.{ctx.ext}"
+                        if fn and fn.has_source_after_function else None
+                    ),
+                    "f_t": f"{base}/target.{ctx.ext}" if fn and fn.has_target_function else None,
+                    "signature": fn.signature if fn else None,
+                    "approximated": approximated or None,
+                    "derivation": ctx.extras.get("derivation_note"),
+                },
+            )
         d.present(
             "normalized_transformation",
             {"payload_ref": "transformation.json"},

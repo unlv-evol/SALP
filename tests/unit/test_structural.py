@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from salp.structural import (
+    JAVA,
     TREE_SITTER_AVAILABLE,
     class_structure,
     control_flow_constructs,
@@ -75,27 +76,29 @@ CROSSES_METHODS = (12, 20)
 # --- parsing and text ---------------------------------------------------------
 def test_node_text_is_exact_and_not_off_by_one():
     """The original sliced with end_col + 1; end points are exclusive."""
-    tree = parse(SOURCE)
-    captures = query(tree.root_node, "(package_declaration) @p")
+    tree = parse(SOURCE, JAVA)
+    captures = query(tree.root_node, "(package_declaration) @p", JAVA)
     assert node_text(captures["p"][0], SOURCE) == "package org.example.demo;"
 
 
 def test_imports_are_recovered_in_order():
-    tree = parse(SOURCE)
-    assert imports_of(tree, SOURCE) == ["import java.util.Objects", "import java.util.List"]
-    assert imported_class_names(tree, SOURCE) == ["Objects", "List"]
+    tree = parse(SOURCE, JAVA)
+    assert imports_of(tree, SOURCE, JAVA) == [
+        "import java.util.Objects", "import java.util.List",
+    ]
+    assert imported_class_names(tree, SOURCE, JAVA) == ["Objects", "List"]
 
 
 def test_parsing_is_not_shared_between_files():
     """Each tree is passed explicitly, so one file cannot see another's AST."""
     other = "package other;\nclass B { void z() {} }\n"
-    assert imports_of(parse(other), other) == []
-    assert imports_of(parse(SOURCE), SOURCE)  # unaffected by the parse above
+    assert imports_of(parse(other, JAVA), other, JAVA) == []
+    assert imports_of(parse(SOURCE, JAVA), SOURCE, JAVA)  # unaffected by the parse above
 
 
 # --- locating the edit region -------------------------------------------------
 def test_locate_finds_the_enclosing_method_and_class():
-    ctx = locate(SOURCE, *MATCHES_BODY)
+    ctx = locate(SOURCE, *MATCHES_BODY, "java")
     assert ctx.found
     assert ctx.class_name == "Widget"
     assert ctx.method_name == "matches"
@@ -103,13 +106,13 @@ def test_locate_finds_the_enclosing_method_and_class():
 
 
 def test_signature_uses_parameter_types_not_names():
-    ctx = locate(SOURCE, *MATCHES_BODY)
+    ctx = locate(SOURCE, *MATCHES_BODY, "java")
     assert ctx.method_signature == "public boolean matches(String, List<String>)"
 
 
 def test_a_region_crossing_methods_selects_by_overlap():
     """No single method contains such a region, so containment alone finds none."""
-    ctx = locate(SOURCE, *CROSSES_METHODS)
+    ctx = locate(SOURCE, *CROSSES_METHODS, "java")
     assert ctx.found
     assert len(ctx.overlapping_methods) > 1
     assert ctx.method_name is not None, "overlap must recover a method"
@@ -117,31 +120,32 @@ def test_a_region_crossing_methods_selects_by_overlap():
 
 
 def test_methods_overlapping_matches_intersecting_ranges_only():
-    tree = parse(SOURCE)
+    tree = parse(SOURCE, JAVA)
     names = [
-        method_name(m, SOURCE) for m in methods_overlapping(tree, SOURCE, *CROSSES_METHODS)
+        method_name(m, SOURCE)
+        for m in methods_overlapping(tree, SOURCE, *CROSSES_METHODS, JAVA)
     ]
     assert names == ["getId", "matches"]
-    assert methods_overlapping(tree, SOURCE, 1, 2) == []  # package/import lines
+    assert methods_overlapping(tree, SOURCE, 1, 2, JAVA) == []  # package/import lines
 
 
 def test_import_region_is_detected():
-    ctx = locate(SOURCE, 3, 4)
+    ctx = locate(SOURCE, 3, 4, "java")
     assert ctx.is_import_region
     assert ctx.method_name is None
 
 
 def test_locate_on_unparseable_input_reports_rather_than_raises():
-    assert locate("", 1, 2).found is False
-    assert locate("!!! not java @@@", 1, 1).found is True  # tree-sitter is error-tolerant
+    assert locate("", 1, 2, "java").found is False
+    assert locate("!!! not java @@@", 1, 1, "java").found is True  # tree-sitter is error-tolerant
 
 
 # --- metadata -----------------------------------------------------------------
 def test_class_structure_lists_direct_members_only():
     """Nested members must not be attributed to the outer class."""
-    tree = parse(SOURCE)
-    klass = query(tree.root_node, "(class_declaration) @c")["c"][0]
-    structure = class_structure(klass, SOURCE)
+    tree = parse(SOURCE, JAVA)
+    klass = query(tree.root_node, "(class_declaration) @c", JAVA)["c"][0]
+    structure = class_structure(klass, SOURCE, JAVA)
 
     assert structure.name == "Widget"
     assert structure.fields == ["private final int id;", "private final String name;"]
@@ -157,30 +161,31 @@ def test_class_structure_lists_direct_members_only():
 
 
 def test_invocations_and_referenced_classes():
-    ctx = locate(SOURCE, *MATCHES_BODY)
+    ctx = locate(SOURCE, *MATCHES_BODY, "java")
     method = ctx._method_node
-    assert [i.text for i in invoked_methods(method, SOURCE)] == ["Objects.equals(candidate, other)"]
+    calls = [i.text for i in invoked_methods(method, SOURCE, JAVA)]
+    assert calls == ["Objects.equals(candidate, other)"]
     # only identifiers that are actually imported count as references
-    assert referenced_classes(method, SOURCE, ctx._tree) == ["List", "Objects"]
+    assert referenced_classes(method, SOURCE, ctx._tree, JAVA) == ["List", "Objects"]
 
 
 def test_neighbouring_methods():
-    ctx = locate(SOURCE, *MATCHES_BODY)
-    previous, following = neighboring_methods(ctx._method_node, SOURCE)
+    ctx = locate(SOURCE, *MATCHES_BODY, "java")
+    previous, following = neighboring_methods(ctx._method_node, SOURCE, JAVA)
     assert previous.signature == "public int getId()"
     assert following.signature == "public String getName()"
 
 
 def test_control_flow_constructs_are_classified():
-    ctx = locate(SOURCE, *MATCHES_BODY)
-    flow = control_flow_constructs(ctx._method_node)
+    ctx = locate(SOURCE, *MATCHES_BODY, "java")
+    flow = control_flow_constructs(ctx._method_node, JAVA)
     assert "if_statement" in flow
     assert "enhanced_for_statement" in flow
     assert "return_statement" in flow
 
 
 def test_describe_assembles_the_whole_context():
-    ctx = locate(SOURCE, *MATCHES_BODY)
+    ctx = locate(SOURCE, *MATCHES_BODY, "java")
     meta = describe(ctx, SOURCE)
     assert meta.package == "org.example.demo"
     assert meta.enclosing_class.name == "Widget"
@@ -190,6 +195,6 @@ def test_describe_assembles_the_whole_context():
 
 
 def test_describe_outside_a_method_still_reports_file_level_context():
-    meta = describe(locate(SOURCE, 3, 4), SOURCE)
+    meta = describe(locate(SOURCE, 3, 4, "java"), SOURCE)
     assert meta.package == "org.example.demo"
     assert meta.enclosing_class is None

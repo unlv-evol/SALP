@@ -257,24 +257,37 @@ def test_edit_region_records_real_spans_from_the_diff_header(tmp_path: Path):
 
 
 # --- characterization over the real pipeline ---------------------------------
-def test_gacpd_only_package_characterizes_moderate(tmp_path: Path):
-    """A GACPD-only package has every foundational category PRESENT.
+def test_gacpd_only_package_characterizes_low_without_the_repositories(tmp_path: Path):
+    """Without clones, tau cannot be recovered, and that caps Readiness at Low.
 
-    Its Coverage is reduced by the UNAVAILABLE SALP-enriched categories, so it
-    characterizes as Moderate at best -- enrichment is what raises Coverage and,
-    with it, Readiness.
+    tau = (f_s, f'_s, f_t) is three function bodies. GACPD supplies hunk regions
+    and a whole target file, so slicing the functions out needs the repositories
+    at their pinned states. Their absence leaves a foundational element
+    UNAVAILABLE, which the specification's first foundational condition caps at
+    Low -- the pipeline must not report a package as adaptable when the
+    transformation it is built around was never recovered.
     """
     sap_dir = _run(tmp_path) / "sap-CombinedKey"
     profile = json.loads((sap_dir / "characterization.json").read_text())
-    assert profile["aggregate"]["readiness"] == "MODERATE"
+    assert profile["aggregate"]["readiness"] == "LOW"
 
     hunk = profile["hunks"]["H-1"]
-    assert hunk["applied_constraints"] == []  # no foundational element is UNAVAILABLE
-    for foundational in ("source_change", "target_localization", "function_transformation"):
+    assert hunk["applied_constraints"] == ["foundational_unavailable:function_transformation"]
+    assert hunk["readiness_preliminary"] == "MODERATE", "only the cap should lower it"
+    for foundational in ("source_change", "target_localization"):
         assert hunk["category_scores"][foundational]["coverage"] == 1.0
     # unresolved enrichment is what holds Coverage down
     assert 0 < hunk["coverage_score"] < 1.0
     assert hunk["category_scores"]["refactoring"]["coverage"] == 0.0
+
+
+def test_a_degraded_run_names_the_fix_for_the_missing_transformation(tmp_path: Path):
+    """An unrecovered tau must say what would recover it, not just report a gap."""
+    sap_dir = _run(tmp_path) / "sap-CombinedKey"
+    doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
+    unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
+    assert unit["state"] == "UNAVAILABLE"
+    assert "salp fetch-repos" in unit["provenance"]["diagnostics"]
 
 
 def test_levels_serialize_as_names(tmp_path: Path):

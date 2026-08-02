@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from salp.analyzers.base import (
-    _PARSEABLE,
     AnalysisContext,
     Analyzer,
     CategoryDraft,
@@ -17,6 +16,8 @@ from salp.models import (
     CategoryEvidence,
 )
 from salp.structural import (
+    diagnostic_for,
+    grammar_for,
     imports_of,
     package_of,
     parse,
@@ -44,19 +45,24 @@ class CompatibilityAnalyzer(Analyzer):
 
     def investigate(self, ctx: AnalysisContext) -> CategoryEvidence:
         d = self.draft(ctx, "no file available at the pinned repository state")
-        if ctx.ext not in _PARSEABLE:
-            return self.unavailable(ctx, f"no grammar configured for .{ctx.ext}")
+        grammar = grammar_for(ctx.ext)
+        if grammar is None:
+            return self.unavailable(ctx, diagnostic_for(ctx.ext))
         if ctx.source_file_text is None:
             return self.unavailable(ctx, "source file not available; run `salp fetch-repos`")
 
-        source_imports = imports_of(parse(ctx.source_file_text), ctx.source_file_text)
+        source_imports = imports_of(
+            parse(ctx.source_file_text, grammar), ctx.source_file_text, grammar
+        )
         d.present("source_apis", {"apis": source_imports})
 
         if ctx.target_file_text is None:
             d.unavailable("target_apis", "target file not available; run `salp fetch-repos`")
             target_imports: list[str] = []
         else:
-            target_imports = imports_of(parse(ctx.target_file_text), ctx.target_file_text)
+            target_imports = imports_of(
+                parse(ctx.target_file_text, grammar), ctx.target_file_text, grammar
+            )
             d.present("target_apis", {"apis": target_imports})
 
         # An import the change introduces that the target does not already have
@@ -86,7 +92,7 @@ class CompatibilityAnalyzer(Analyzer):
                 d.absent(element, f"the {side} build file declares no dependencies")
 
         d = self._record_findings(
-            d, introduced, target_deps, package_of(ctx.source_file_text)
+            d, introduced, target_deps, package_of(ctx.source_file_text, ctx.ext)
         )
         d.present(
             "compatibility_provenance",

@@ -37,7 +37,11 @@ Issues = "https://github.com/unlv-evol/SALP/issues"
 [project.optional-dependencies]
 # Heavy / external-tool integrations, kept optional so the core installs cleanly.
 # The Query/QueryCursor API these use landed in tree-sitter 0.25.
-structural = ["tree-sitter>=0.25", "tree-sitter-java>=0.23"]
+structural = [
+    "tree-sitter>=0.25",
+    "tree-sitter-java>=0.23",
+    "tree-sitter-scala>=0.24",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",

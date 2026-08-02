@@ -1,41 +1,47 @@
-"""Tree-sitter structural analysis of Java source.
+"""Tree-sitter structural analysis, per language.
 
 Adapted from the ``Making_AST`` package of
 unlv-evol/GACPD_Hunk_Context_Extraction; see
 ``docs/adoption/gacpd-hunk-context-extraction.md``.
 
-tree-sitter ships as the optional ``structural`` extra. When absent,
-``TREE_SITTER_AVAILABLE`` is False and analyzers record UNAVAILABLE with a
-diagnostic instead of failing.
+Java and Scala are supported. Every analysis is written once against the node
+vocabulary in ``grammars.py`` rather than against one grammar's node names, so a
+language is added by declaring a ``Grammar``, not by branching in the analyzers.
+
+tree-sitter and each language binding ship in the optional ``structural`` extra,
+and availability is checked per language: ``grammar_for`` returns None when a
+binding is missing, and ``diagnostic_for`` says which package would fix it.
+Analyzers record UNAVAILABLE with that diagnostic rather than failing, and never
+fall back to another language's grammar.
 """
 
 from salp.structural.context import (
+    MATCH_EXACT,
+    MATCH_NAME,
+    MATCH_NAME_ARITY,
     EditContext,
+    file_context,
     imported_class_names,
     imports_of,
     locate,
+    locate_method,
     methods_overlapping,
     package_of,
     to_ast_dict,
 )
-from salp.structural.java import (
-    CLASS_LIKE,
+from salp.structural.grammars import (
+    GRAMMARS,
     IMPORT_ERROR,
-    METHOD_LIKE,
+    JAVA,
+    PARSEABLE_EXTENSIONS,
+    SCALA,
     TREE_SITTER_AVAILABLE,
     ControlFlow,
-    control_flow_of,
-    enclosing_class,
-    enclosing_method,
-    is_import_region,
-    is_in_method,
-    method_name,
-    method_signature,
-    node_text,
-    parameter_type,
+    Grammar,
+    diagnostic_for,
+    grammar_for,
     parse,
     query,
-    sort_by_position,
 )
 from salp.structural.metadata import (
     ClassStructure,
@@ -49,30 +55,52 @@ from salp.structural.metadata import (
     neighboring_methods,
     referenced_classes,
 )
+from salp.structural.syntax import (
+    control_flow_of,
+    enclosing_class,
+    enclosing_method,
+    is_import_region,
+    is_in_method,
+    method_name,
+    method_signature,
+    node_text,
+    parameter_type,
+    sort_by_position,
+)
 
 __all__ = [
-    "CLASS_LIKE",
+    "GRAMMARS",
+    "IMPORT_ERROR",
+    "JAVA",
+    "MATCH_EXACT",
+    "MATCH_NAME",
+    "MATCH_NAME_ARITY",
+    "PARSEABLE_EXTENSIONS",
+    "SCALA",
+    "TREE_SITTER_AVAILABLE",
     "ClassStructure",
     "ControlFlow",
     "EditContext",
-    "IMPORT_ERROR",
+    "Grammar",
     "Invocation",
-    "METHOD_LIKE",
     "MethodRef",
     "SurroundingMetadata",
-    "TREE_SITTER_AVAILABLE",
     "class_structure",
     "control_flow_constructs",
     "control_flow_of",
     "describe",
+    "diagnostic_for",
     "enclosing_class",
     "enclosing_method",
+    "file_context",
+    "grammar_for",
     "imported_class_names",
     "imports_of",
     "invoked_methods",
     "is_import_region",
     "is_in_method",
     "locate",
+    "locate_method",
     "method_name",
     "method_signature",
     "methods_overlapping",

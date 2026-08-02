@@ -8,6 +8,7 @@ from salp.ingest.diffs import (
     HunkHeader,
     hunk_side,
     parse_hunk_header,
+    revert_patch,
     split_patch,
 )
 from salp.ingest.gacpd import (
@@ -39,6 +40,7 @@ __all__ = [
     "hunk_side",
     "load_pull_request",
     "parse_hunk_header",
+    "revert_patch",
     "parse_pr_results",
     "parse_results",
     "split_patch",
