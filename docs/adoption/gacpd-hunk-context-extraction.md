@@ -16,9 +16,11 @@ behaviour was deliberately changed.
 
 ## 1. What was adopted
 
-### 1.1 `Making_AST/Extract_Hunk_AST_Util.py` → `src/salp/structural/java.py`
+### 1.1 `Making_AST/Extract_Hunk_AST_Util.py` → `src/salp/structural/syntax.py`
 
-Tree-sitter Java navigation. The single most reusable asset in the repository.
+Tree-sitter navigation. The single most reusable asset in the repository. The
+adopted functions were Java-only; here they take the `Grammar` to use, so the
+same logic serves Scala (§7).
 
 | Original | Here | Notes |
 | --- | --- | --- |
@@ -29,7 +31,7 @@ Tree-sitter Java navigation. The single most reusable asset in the repository.
 | `get_method_signature` | `method_signature` | |
 | `get_node_exact_string` | `node_text` | **corrected**, see §3.1 |
 | `sort_nodes_by_start_point` | `sort_by_position` | |
-| `Construct_Flow_Type` (enum) | `ControlFlow` (StrEnum) | values are tree-sitter node types |
+| `Construct_Flow_Type` (enum) | `ControlFlow` (StrEnum) | values read as Java node types; now a language-neutral vocabulary each grammar maps onto |
 | `get_node_construct_flow_type` | `control_flow_of` | table lookup + else/else-if disambiguation |
 | `is_hunk_import` | `is_import_region` | **corrected**, see §3.4 |
 
@@ -333,10 +335,31 @@ Over the 11 SAPs of the current sample, across the three waves of adoption
 | verification | 100 U | 50 P / 50 U |
 | refactoring | 125 U | 125 VA |
 
-Coverage rose from 0.529 to **0.941** on every Java SAP, and Readiness from
-uniformly Moderate to **9 High / 2 Moderate**. The 12 remaining structural gaps
-and both Moderate packages are the two Scala files: no grammar is configured, so
-they report an explicit UNAVAILABLE rather than being silently skipped.
+Coverage rose from 0.529 to **0.940** across all 25 hunks, and Readiness from
+uniformly Moderate to **11 High**.
+
+Two things were added after the waves above, and both changed these numbers.
+
+*The function transformation.* The same parser slices the three members of
+τ = (f_s, f'_s, f_t) out of whole files and matches the target function to the
+source by signature. `locate` supplies the enclosing method on the source side;
+`locate_method` — which has no counterpart in the reference implementation —
+finds the corresponding method on the target side.
+
+*Scala.* The reference implementation is Java-only, and so was this until the
+node vocabulary was lifted into `grammars.py`. Scala names almost every construct
+differently — `compilation_unit` for `program`, `function_definition` for
+`method_declaration`, `if_expression` for `if_statement`, `template_body` for
+`class_body` — and models as expressions what Java models as statements, so the
+adopted queries could not simply be reused. Two Scala constructs have no Java
+counterpart and are mapped onto the nearest term: a `for` comprehension reports
+as `enhanced_for_statement`, and `match` as `switch_expression`.
+
+One adopted assumption did not survive the move. `method_signature` accumulated
+children until it reached a `block`, which is the body of every Java method. A
+Scala body is any expression — `def size: Int = 1` has an integer literal for a
+body — so accumulation now stops at whatever the grammar marks as the `body`
+field, which serves both languages.
 
 Refactoring is wholly VERIFIED_ABSENT rather than PRESENT, which is the correct
 finding: RefactoringMiner analysed 248 commits of the Kafka target's drift and
