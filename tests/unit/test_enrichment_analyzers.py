@@ -128,12 +128,26 @@ def test_compatibility_without_a_source_file_is_unavailable():
 
 
 def test_compatibility_on_an_unparseable_language_is_unavailable():
+    """A language no grammar claims is an explicit gap, not a silent skip."""
     ctx = AnalysisContext(
-        hunk_id="H-1", fn_id="X", source_file="X.scala", ext="scala", source_file_text="object X"
+        hunk_id="H-1", fn_id="X", source_file="X.kt", ext="kt", source_file_text="object X"
     )
     ce = CompatibilityAnalyzer().investigate(ctx)
     assert all(e.state is EvidenceState.UNAVAILABLE for e in ce.elements)
-    assert "scala" in ce.elements[0].provenance.diagnostics
+    assert "kt" in ce.elements[0].provenance.diagnostics
+
+
+def test_compatibility_reads_scala_imports():
+    """Scala is parsed by its own grammar, not skipped and not read as Java."""
+    source = "package p\nimport a.b.Widget\nobject X { def m(): Unit = Widget.go() }\n"
+    ctx = AnalysisContext(
+        hunk_id="H-1", fn_id="X", source_file="X.scala", ext="scala",
+        source_file_text=source, target_file_text="package q\nobject X\n",
+    )
+    ce = CompatibilityAnalyzer().investigate(ctx)
+    apis = next(e for e in ce.elements if e.object_type.endswith("source_apis"))
+    assert apis.state is EvidenceState.PRESENT
+    assert apis.attributes["apis"] == ["import a.b.Widget"]
 
 
 # --- verification -------------------------------------------------------------

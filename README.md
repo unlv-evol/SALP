@@ -21,7 +21,7 @@ salp run
                  repos              resolve state pins; read files at those commits
                  analyzers          one investigation per evidence category
                    ├ gacpd            source change · localization · transformation
-                   ├ structural  ───▶ structural/       (tree-sitter Java)
+                   ├ structural  ───▶ structural/       (tree-sitter Java, Scala)
                    ├ compatibility    imports + build-file declarations
                    ├ verification     target-side tests, via git grep
                    └ refactoring ───▶ analyzers/tools/  (RefactoringMiner)
@@ -48,10 +48,16 @@ make check      # ruff, mypy, pytest — what CI runs
 
 Install the `structural` extra, not just `dev` — `make dev` does this for you,
 and the equivalent is `pip install -e ".[dev,structural]"`. It carries
-tree-sitter, without which the structural, surrounding, and compatibility
-analyzers all report `UNAVAILABLE`. A run still succeeds, but on the reference
-sample mean Coverage over all 25 hunks falls from 0.922 to 0.666 and **no package
-reaches High Readiness** — all eleven cap at Moderate.
+tree-sitter and the Java and Scala grammars, without which the structural,
+surrounding, and compatibility analyzers all report `UNAVAILABLE`. A run still
+succeeds, but on the reference sample mean Coverage over all 25 hunks falls from
+0.940 to 0.676 and **every one of the eleven packages caps at Low** — without a
+grammar the function transformation cannot be sliced out of the pinned files, and
+an `UNAVAILABLE` foundational element caps Readiness at Low regardless of
+Coverage.
+
+Grammars are checked one at a time. Having tree-sitter and `tree-sitter-java` but
+not `tree-sitter-scala` degrades only the Scala files, and says so by name.
 
 Then point it at a GACPD run:
 
@@ -91,7 +97,7 @@ Three directories are git-ignored and populated locally:
 | --- | --- | --- |
 | `data/gacpd/` | Real GACPD run output — the default `paths.gacpd_run` | [README](data/gacpd/README.md) |
 | `data/repos/` | Bare clones of the source and target repositories | [README](data/repos/README.md) |
-| `tools/` | RefactoringMiner, tree-sitter grammars, other external binaries | [README](tools/README.md) |
+| `tools/` | RefactoringMiner and other external binaries | [README](tools/README.md) |
 
 ## Repository layout
 
@@ -135,8 +141,9 @@ src/salp/
     pins.py               #   state-pin resolution
     files.py              #   pinned-state files, grep, build declarations
 
-  structural/             # tree-sitter Java
-    java.py               #   parsing, navigation, signatures
+  structural/             # tree-sitter, per language
+    grammars.py           #   node vocabulary per language; Java and Scala
+    syntax.py             #   navigation and signatures, grammar-driven
     context.py            #   locating an edit region's context
     metadata.py           #   class/method/control-flow metadata
 
@@ -194,6 +201,47 @@ PR-<n>/
       refactorings.json  compatibility.json  surrounding.json
       verification.json  provenance.json
 ```
+
+## The function transformation
+
+The adaptation pipeline is built around a transformation between two versions of
+one source function, applied to a corresponding target function:
+
+```
+τ = (f_s, f'_s, f_t)
+```
+
+`f_s` and `f'_s` are the source function before and after the change; `f_t` is
+the target function before adaptation. All three are **function bodies**, and
+none of them is in the GACPD output: `hunk_<n>_full_del` / `full_add` are hunk
+regions in diff syntax, complete with `@@` headers and `-`/`+` prefixes, and
+`cmp/<File>` is a whole file. Each is therefore sliced out of the file at its
+pinned repository state, in `packaging/builder.py`:
+
+| Member | How it is recovered |
+| --- | --- |
+| `f'_s` | the method enclosing the edit region in the pinned source file, which sits at the pull-request head and is thus the *post*-change state |
+| `f_s` | the same method in that file with the patch undone (`ingest.revert_patch`) |
+| `f_t` | the *corresponding* method in the pinned target file (`structural.locate_method`) |
+
+`f_t` is matched by **signature**, never by the source's line span. A diverged
+variant has drifted in position as well as content, so the source's line numbers
+land on whatever happens to occupy them — on the reference sample that resolved
+`saveNow` to `saveNowInternal` and reported it as recovered. Matching degrades in
+three recorded steps — exact signature, then name and arity, then name alone —
+and an overload resolved by name alone is flagged ambiguous rather than picked
+silently.
+
+Two outcomes are deliberately distinguished when no function is found:
+
+* an edit region in the **import block** has no enclosing function by
+  construction, so τ is `NOT_APPLICABLE` and leaves both denominators;
+* a function that exists but could not be sliced — no clone, no grammar — is
+  `UNAVAILABLE` with a diagnostic naming the fix, and caps Readiness at Low.
+
+`revert_patch` verifies every context and added line against the file it claims
+to describe and returns nothing on any mismatch. A wrong `f_s` is worse than an
+absent one: downstream it is indistinguishable from a real one.
 
 ## Required information elements
 
@@ -285,6 +333,37 @@ that import *is* the registration, and registering a class replaces the built-in
 for its category. Build the category through `self.draft(...)` so every required
 information element carries an explicit outcome.
 
+### Adding a language
+
+Every structural analysis is written once against the node vocabulary in
+[structural/grammars.py](src/salp/structural/grammars.py), not against one
+grammar's node names. A language is a `Grammar` declaration plus its tree-sitter
+binding in the `structural` extra — no analyzer changes:
+
+```python
+KOTLIN = Grammar(
+    name="Kotlin",
+    module="tree_sitter_kotlin",
+    extensions=frozenset({"kt", "kts"}),
+    root="source_file",
+    class_like=frozenset({"class_declaration", "object_declaration"}),
+    method_like=frozenset({"function_declaration"}),
+    ...
+)
+```
+
+Then add it to `GRAMMARS`. Availability is per language: `grammar_for(ext)`
+returns None when the binding is not installed, and `diagnostic_for(ext)`
+distinguishes "no grammar claims `.kt`" from "install `tree-sitter-kotlin`".
+Analyzers record `UNAVAILABLE` with that diagnostic — nothing falls back to
+another language's grammar, which is how Scala was once parsed as Java and the
+error tree reported as evidence.
+
+The `ControlFlow` vocabulary is language-neutral and part of the written schema;
+each grammar maps its own node types onto it, so Scala's `match_expression`
+reports as `switch_expression` and its for-comprehension as
+`enhanced_for_statement`.
+
 [CONTRIBUTING.md](CONTRIBUTING.md) covers the four rules the evidence model
 depends on.
 
@@ -302,8 +381,8 @@ On the reference sample — 11 SAPs, 25 hunks, 1,450 required information elemen
 | Population | Mean Coverage | Readiness |
 | --- | --- | --- |
 | Java SAPs (23 hunks) | 0.941 | 9 High |
-| Scala SAPs (2 hunks) | 0.706 | 2 Moderate |
-| All hunks | 0.922 | — |
+| Scala SAPs (2 hunks) | 0.931 | 2 High |
+| All hunks | 0.940 | — |
 
 Per category, across all 25 hunks:
 
@@ -311,10 +390,10 @@ Per category, across all 25 hunks:
 | --- | ---: | ---: | ---: | ---: |
 | source_change | 150 | 0 | 0 | 0 |
 | target_localization | 150 | 25 | 0 | 0 |
-| function_transformation | 144 | 6 | 0 | 0 |
-| compatibility | 149 | 12 | 14 | 0 |
-| structural | 138 | 0 | 12 | 0 |
-| surrounding | 114 | 18 | 18 | 0 |
+| function_transformation | 135 | 6 | 0 | 9 |
+| compatibility | 163 | 12 | 0 | 0 |
+| structural | 149 | 0 | 1 | 0 |
+| surrounding | 121 | 20 | 9 | 0 |
 | verification | 50 | 0 | 50 | 0 |
 | refactoring | 0 | 125 | 0 | 0 |
 | standalone | 0 | 150 | 0 | 0 |
@@ -326,18 +405,22 @@ the five files these SAPs are about — the landing sites did not move.
 `artifact_placement` is `NOT_APPLICABLE` on all 25 hunks (125 elements), every
 SAP here being a mapped change, and so leaves both denominators rather than
 counting against Coverage.
-the 12 structural gaps and both Moderate packages are the two Scala files, which
-have no configured grammar. These are reported as explicit gaps with diagnostics
-rather than silently skipped — which is the signal the evidence model exists to
-give.
+
+`function_transformation` has 9 `NOT_APPLICABLE` elements for the same reason at
+element scope: nine hunks edit outside any method — eight in an import block, one
+in a Scala class parameter list — so τ is undefined there rather than
+unrecovered. The single remaining `structural` gap is a target file whose
+counterpart method no longer exists in the variant, which is a real finding and
+scores as one. All of these are reported as explicit gaps with diagnostics rather
+than silently skipped — which is the signal the evidence model exists to give.
 
 Known gaps, in the order they are worth closing:
 
 1. **Minting standalone SAPs** — the change type, its foundational set, and both
    analyzers exist and are tested, but the pipeline only mints MO (mapped) files,
    so no standalone SAP is constructed from a real run yet.
-2. **A Scala grammar** — two of the eleven sample SAPs cap at Moderate purely for
-   want of one.
+2. **More languages** — Java and Scala are supported; a third is a `Grammar`
+   declaration in `structural/grammars.py`, not a change to any analyzer.
 3. **Engine hardening** — Coverage iterates the categories it is handed rather than
    the set expected for the change type, so an uninvestigated category is dropped
    from the denominator instead of scoring zero. No `NOT_READY` level, and

@@ -70,8 +70,12 @@ _SOURCE_CHANGE = (
 _TARGET_LOCALIZATION = (
     _e("target_repo_revision", "target repository and revision identifiers",
        "repo", "revision"),
+    # "method" as well as "payload_ref": recovering the file the target function
+    # lives in is not the same as recovering the function. Where only the file is
+    # available the uniform rule scores this 0.5, which is what partial recovery
+    # of f_t actually is.
     _e("localized_target_function", "the localized target function or candidates",
-       "payload_ref"),
+       "payload_ref", "method"),
     _e("target_file_location", "the target file and location", "target_file"),
     _e("source_target_correspondence", "the source-to-target correspondence",
        "source_file", "target_file"),

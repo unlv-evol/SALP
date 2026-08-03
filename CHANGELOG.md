@@ -34,8 +34,53 @@ All notable changes to this project are documented here, following
 - Schema conformance of the *written* package (`salp validate`), gated in CI
   alongside an artifact-generation check.
 - Tool versions recorded in evidence provenance.
+- `ingest.revert_patch` reconstructs a pre-change file from its post-change state
+  and unified diff, verifying every context and added line and returning nothing
+  on any mismatch.
+- `structural.locate_method` finds a method by signature correspondence, in three
+  recorded steps — exact signature, name and arity, name alone — so a weaker
+  match is visible rather than passed off as an exact one.
+
+- **Scala support.** `structural/grammars.py` declares the node vocabulary per
+  language — Java and Scala — and every structural analysis is written against
+  it rather than against one grammar's node names, so a third language is a
+  `Grammar` declaration, not a change to any analyzer. Availability is checked
+  per language: a missing binding is reported by name, and nothing falls back to
+  another language's grammar.
+
+### Changed
+
+- `structural/java.py` is now `structural/syntax.py`, and its functions take the
+  `Grammar` to use. Entry points in `structural/context.py` take the file's
+  extension. There is no default: a caller that does not say which language it
+  has cannot silently get Java.
+- **A GACPD-only run now characterizes as Low, not Moderate.** τ needs the
+  repositories at their pinned states; without them a foundational element is
+  `UNAVAILABLE`, which the specification caps at Low. The previous Moderate was
+  reported while all three members of τ were stand-ins.
 
 ### Fixed
+
+- **τ = (f_s, f'_s, f_t) was not three functions.** `f_s` and `f'_s` were GACPD
+  hunk regions in diff syntax — `@@` headers, `-`/`+` prefixes — and `f_t` was
+  the whole enclosing file, duplicated into every function-pool entry. All three
+  are now sliced out of the files at their pinned repository states.
+- **The target function was located by the source's line numbers.** In a diverged
+  variant those lines land on whatever occupies them: on the reference sample 4
+  of 12 resolved to a different method — `saveNow` to `saveNowInternal`,
+  `removeTopicEntryForBroker` to `update` — each reported `PRESENT`. The
+  counterpart is now matched by signature.
+- `localized_target_function` reported `representation: 1.0` while pointing at a
+  whole file. Recovering the file a target function lives in is partial evidence,
+  and now scores as such.
+- An edit region outside any method — an import block, a class parameter list —
+  has no enclosing function by construction. τ is now `NOT_APPLICABLE` there,
+  leaving both denominators, instead of scoring the hunk down for evidence it
+  cannot have. Only a file that could not be read or parsed stays `UNAVAILABLE`.
+- A source method with no counterpart in the target reported `target_structure`
+  as `PRESENT` on the strength of file-level context alone. It is now
+  `UNAVAILABLE` with the reason; only a region that never had an enclosing method
+  is legitimately reported from file structure.
 
 - Blank fields in `pr_results.txt` swallowed the following line, so a PR with no
   title took `"PR Description:"` as its title.

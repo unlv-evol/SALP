@@ -149,6 +149,67 @@ def hunk_side(diff: str | None, *, side: str) -> str | None:
     return "\n".join(lines) + "\n" if lines else None
 
 
+def revert_patch(after_text: str | None, patch: str | None) -> str | None:
+    """Reconstruct the pre-change file from the post-change file and its diff.
+
+    The source repository is pinned at the pull-request head, so the file read at
+    that state is the *post*-change one. Recovering ``f_s`` -- the source function
+    before modification -- means undoing the patch, which a unified diff carries
+    enough information to do exactly.
+
+    Every context and added line is checked against the file it is supposed to
+    describe. On any mismatch this returns None rather than a reconstruction that
+    silently drifted: a wrong ``f_s`` is worse than an absent one, because
+    downstream it is indistinguishable from a real one.
+    """
+    if after_text is None or not patch:
+        return None
+    matches = list(_HUNK_HEADER.finditer(patch))
+    if not matches:
+        return None
+
+    after = after_text.splitlines()
+    out: list[str] = []
+    cursor = 0  # 0-based index of the next unconsumed line of `after`
+
+    for i, m in enumerate(matches):
+        header = parse_hunk_header(patch[m.start() : m.end()])
+        if header is None:  # pragma: no cover - the match guarantees a header
+            return None
+        body = patch[m.end() : (matches[i + 1].start() if i + 1 < len(matches) else len(patch))]
+        # The header match ends before its own line terminator, so the body opens
+        # with one. Left in, splitlines() yields a leading "" that reads as an
+        # empty context line and shifts the whole hunk by one.
+        body = body[1:] if body.startswith("\n") else body
+        start = header.new_start - 1
+        if not cursor <= start <= len(after):
+            return None
+        out.extend(after[cursor:start])
+
+        consumed = 0
+        for line in body.splitlines():
+            if line.startswith("\\"):  # "\ No newline at end of file"
+                continue
+            if line.startswith("-"):
+                out.append(line[1:])
+                continue
+            if line.startswith("+"):
+                expected = line[1:]
+            elif line.startswith(" ") or line == "":
+                expected = line[1:] if line else ""
+            else:  # not part of a hunk body
+                return None
+            if start + consumed >= len(after) or after[start + consumed] != expected:
+                return None
+            if not line.startswith("+"):
+                out.append(expected)
+            consumed += 1
+        cursor = start + consumed
+
+    out.extend(after[cursor:])
+    return "\n".join(out) + ("\n" if after_text.endswith("\n") else "")
+
+
 def split_patch(patch: str | None) -> list[tuple[HunkHeader, str]]:
     """Split a unified diff into one ``(header, text)`` pair per hunk.
 

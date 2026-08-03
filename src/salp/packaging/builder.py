@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from salp.ingest import (
     HunkHeader,
     hunk_side,
     parse_hunk_header,
+    revert_patch,
     split_patch,
 )
 from salp.models import (
@@ -29,9 +31,19 @@ from salp.models import (
     TransformationUnit,
 )
 from salp.repos import grep_files, read_dependencies, read_file
+from salp.structural import grammar_for, locate, locate_method
 
 log = get_logger(__name__)
 
+
+# Why a hunk has no enclosing function. The first two are properties of the
+# change -- there is no function to transform -- and the last three are gaps in
+# the analysis. `FunctionPayload.has_no_function_by_construction` reads them.
+IMPORT_REGION = "import_region"
+OUTSIDE_ANY_METHOD = "outside_any_method"
+NO_GRAMMAR = "no_grammar"
+NO_PINNED_FILE = "no_pinned_file"
+NO_PARSE = "no_parse"
 
 # What the GACPD hunk artifacts actually contain, recorded on every payload
 # built from them so the approximation is never silently presented as exact.
@@ -206,19 +218,84 @@ def function_ids(sources: list[_HunkSource], file_stem: str) -> dict[str, str]:
     return assigned
 
 
+@dataclass(frozen=True)
+class _FileStates:
+    """The whole-file text at each state the transformation is sliced from."""
+
+    # The pinned source file sits at the pull-request head: the post-change state.
+    source_after: str | None = None
+    # The same file with the patch undone: the pre-change state.
+    source_before: str | None = None
+    # The pinned target file, from which the corresponding function is taken.
+    target: str | None = None
+    # Whole-file fallback when the corresponding function cannot be isolated.
+    target_whole: str | None = None
+
+
+def _enclosing_function(
+    text: str | None, header: HunkHeader | None, side: str, ext: str
+) -> Any | None:
+    """The context around a hunk's edit region in a whole file, method or not."""
+    if not text or header is None or grammar_for(ext) is None:
+        return None
+    start, end = (
+        (header.old_start, header.old_end) if side == "before"
+        else (header.new_start, header.new_end)
+    )
+    return locate(text, start, end, ext)
+
+
+def _no_function_reason(files: _FileStates, ctx: Any | None, ext: str) -> str:
+    """Why no enclosing function was found, distinguishing cannot-have from could-not-get.
+
+    Two outcomes look alike and mean opposite things. A file that *parsed*, whose
+    edit region provably sits outside every method -- an import block, a class
+    parameter list, a field initialiser -- has no function to transform: that is
+    a property of the change, and the caller records it NOT_APPLICABLE so it
+    leaves both denominators. A file that could not be read or parsed might have
+    a function that simply was not reached, which is a recoverable shortfall and
+    stays UNAVAILABLE with the fix named.
+    """
+    if grammar_for(ext) is None:
+        return NO_GRAMMAR
+    if files.source_after is None:
+        return NO_PINNED_FILE
+    if ctx is None or not ctx.found:
+        return NO_PARSE
+    return IMPORT_REGION if ctx.is_import_region else OUTSIDE_ANY_METHOD
+
+
 def _build_function_pool(
     sap: SAP,
     sources: list[_HunkSource],
     fn_ids: dict[str, str],
     ext: str,
-    target_text: str | None,
+    files: _FileStates,
 ) -> None:
     """Register one pool entry per distinct enclosing function.
 
-    Hunks that occupy the same function contribute their regions to a single
-    entry, in file order, each retaining its diff header so the concatenation
-    stays self-describing. ``f_t`` is the located target file, shared by every
-    function of this SAP.
+    The transformation the specification asks for is ``tau = (f_s, f'_s, f_t)``,
+    three *functions*: the source function before and after the change, and the
+    target function before adaptation. None of the three is recoverable from the
+    GACPD artifacts alone -- ``full_del``/``full_add`` are hunk regions with diff
+    context, and ``cmp/<File>`` is a whole file -- so each is sliced out of the
+    file at its pinned repository state:
+
+    * ``f'_s`` is the method enclosing the edit region in the pinned source file,
+      which sits at the pull-request head and is therefore the post-change state;
+    * ``f_s`` is the same method in that file with the patch undone;
+    * ``f_t`` is the *corresponding* method in the pinned target file, found by
+      signature rather than by the source's line span.
+
+    Where a whole file or a grammar is unavailable, the entry falls back to the
+    GACPD region for the source sides and the whole file for the target, and
+    records that it did. The fallback is what the required-field rule then scores
+    as partial, so a degraded install stays usable without misreporting itself.
+
+    An edit region in the import block has no enclosing function at all. That is
+    recorded distinctly from a failure to find one, because the two mean opposite
+    things: the first is a property of the change, the second a gap in the
+    analysis.
     """
     grouped: dict[str, list[_HunkSource]] = {}
     for source in sources:
@@ -226,17 +303,53 @@ def _build_function_pool(
 
     for fn_id, members in grouped.items():
         fn = FunctionPayload(fn_id=fn_id, ext=ext)
-        before = [m.before for m in members if m.before]
-        after = [m.after for m in members if m.after]
-        if before:
-            sap.add_payload(fn.source_before_ref, "\n".join(before))
-            fn.has_source_before = True
-        if after:
-            sap.add_payload(fn.source_after_ref, "\n".join(after))
+        header = next((m.header for m in members if m.header), None)
+
+        after_ctx = _enclosing_function(files.source_after, header, "after", ext)
+        before_ctx = _enclosing_function(files.source_before, header, "before", ext)
+        if not ((after_ctx and after_ctx.has_method) or (before_ctx and before_ctx.has_method)):
+            fn.no_function_reason = _no_function_reason(files, after_ctx or before_ctx, ext)
+
+        if after_ctx is not None and after_ctx.method_source:
+            sap.add_payload(fn.source_after_ref, after_ctx.method_source)
             fn.has_source_after = True
-        if target_text is not None:
-            sap.add_payload(fn.target_ref, target_text)
+            fn.signature = after_ctx.method_signature
+            fn.method_name = after_ctx.method_name
+        elif regions := [m.after for m in members if m.after]:
+            sap.add_payload(fn.source_after_ref, "\n".join(regions))
+            fn.has_source_after = True
+            fn.source_after_is_region = True
+
+        if before_ctx is not None and before_ctx.method_source:
+            sap.add_payload(fn.source_before_ref, before_ctx.method_source)
+            fn.has_source_before = True
+            fn.signature = fn.signature or before_ctx.method_signature
+            fn.method_name = fn.method_name or before_ctx.method_name
+        elif regions := [m.before for m in members if m.before]:
+            sap.add_payload(fn.source_before_ref, "\n".join(regions))
+            fn.has_source_before = True
+            fn.source_before_is_region = True
+
+        target_ctx = (
+            locate_method(files.target, fn.signature or "", fn.method_name, ext)
+            if files.target and fn.signature and grammar_for(ext) is not None
+            else None
+        )
+        if target_ctx is not None and target_ctx.method_source:
+            sap.add_payload(fn.target_ref, target_ctx.method_source)
             fn.has_target = True
+            fn.target_signature = target_ctx.method_signature
+            fn.target_match_kind = target_ctx.match_kind
+        elif files.target_whole is not None:
+            # The counterpart could not be isolated; the whole file is still the
+            # best available evidence, but it is a file, not f_t.
+            sap.add_payload(fn.target_ref, files.target_whole)
+            fn.has_target = True
+            fn.target_is_whole_file = True
+            fn.target_diagnostics = (
+                target_ctx.diagnostics if target_ctx is not None
+                else "no pinned target file or no grammar; run `salp fetch-repos`"
+            )
         sap.functions[fn_id] = fn
 
 
@@ -336,17 +449,21 @@ def build_sap(
     for source in sources:
         source.attach_diff(patch_slices.get(source.hunk_id))
 
-    target_text = _read(gf.target_file)
-    fn_ids = function_ids(sources, file_stem)
-    _build_function_pool(sap, sources, fn_ids, ext, target_text)
-
-    context_names = [c.display_name for c in (pr.context_files if pr else [])]
-    hunk_order = [s.hunk_id for s in sources]
-
     # Whole files at the pinned states, for analyses that need the enclosing
     # structure GACPD's hunk regions cannot carry.
     source_file_text = _at_pin(cache_dir, source_pin, gf.source_path)
     target_file_text = _at_pin(cache_dir, target_pin, gf.localization.divergent_path)
+
+    fn_ids = function_ids(sources, file_stem)
+    _build_function_pool(sap, sources, fn_ids, ext, _FileStates(
+        source_after=source_file_text,
+        source_before=revert_patch(source_file_text, _read(gf.patch)),
+        target=target_file_text,
+        target_whole=target_file_text or _read(gf.target_file),
+    ))
+
+    context_names = [c.display_name for c in (pr.context_files if pr else [])]
+    hunk_order = [s.hunk_id for s in sources]
 
     # §17: a pin records the resolved dependency versions of the state it binds.
     source_deps = _deps(cache_dir, source_pin, gf.source_path)
@@ -391,6 +508,7 @@ def build_sap(
             gacpd_dir=str(gf.file_dir),
             source_file_text=source_file_text,
             target_file_text=target_file_text,
+            function=sap.functions.get(fn_id),
             extras={
                 "context_files": context_names,
                 "hunk_order": hunk_order,

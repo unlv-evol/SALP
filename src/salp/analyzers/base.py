@@ -13,10 +13,12 @@ from salp.models import (
     ElementSpec,
     EvidenceObject,
     EvidenceState,
+    FunctionPayload,
     Provenance,
     RepositoryStatePin,
     elements_for,
 )
+from salp.structural import PARSEABLE_EXTENSIONS
 
 
 @dataclass
@@ -49,6 +51,11 @@ class AnalysisContext:
     # regions, so analyses needing enclosing structure read these instead.
     source_file_text: str | None = None
     target_file_text: str | None = None
+    # What the function pool actually recovered for this hunk's function: which
+    # members of tau are real functions and which are stand-ins. Analyzers report
+    # from this rather than from the presence of a GACPD artifact, so a payload
+    # that is a diff region or a whole file is not claimed as a function.
+    function: FunctionPayload | None = None
     extras: dict[str, object] = field(default_factory=dict)
 
     @property
@@ -177,6 +184,17 @@ class Analyzer(abc.ABC):
             ],
         )
 
+    def not_applicable_element(
+        self, ctx: AnalysisContext, spec: ElementSpec, reason: str
+    ) -> EvidenceObject:
+        """One element the change structurally cannot have."""
+        return EvidenceObject(
+            object_id=self._object_id(ctx, spec.element_id),
+            object_type=f"{self.category.value}.{spec.element_id}",
+            state=EvidenceState.NOT_APPLICABLE,
+            provenance=self._provenance(ctx, status="not_applicable", diagnostics=reason),
+        )
+
     def not_applicable(self, ctx: AnalysisContext, reason: str) -> CategoryEvidence:
         """Every required element NOT_APPLICABLE: the category does not apply here.
 
@@ -188,14 +206,7 @@ class Analyzer(abc.ABC):
         return CategoryEvidence(
             category=self.category,
             elements=[
-                EvidenceObject(
-                    object_id=self._object_id(ctx, spec.element_id),
-                    object_type=f"{self.category.value}.{spec.element_id}",
-                    state=EvidenceState.NOT_APPLICABLE,
-                    provenance=self._provenance(
-                        ctx, status="not_applicable", diagnostics=reason
-                    ),
-                )
+                self.not_applicable_element(ctx, spec, reason)
                 for spec in elements_for(self.category)
             ],
         )
@@ -262,6 +273,13 @@ class CategoryDraft:
         )
         return self
 
+    def not_applicable(self, element_id: str, reason: str) -> CategoryDraft:
+        """One element the change structurally cannot have, in an otherwise live category."""
+        self._objects[element_id] = self._analyzer.not_applicable_element(
+            self._ctx, self._spec(element_id), reason
+        )
+        return self
+
     def build(self) -> CategoryEvidence:
         return CategoryEvidence(
             category=self._analyzer.category,
@@ -293,6 +311,7 @@ def registered_categories() -> Iterable[Category]:
     return _REGISTRY.keys()
 
 
-# Extensions the configured grammars can parse. Anything else is an explicit
-# UNAVAILABLE rather than a silent skip.
-_PARSEABLE = frozenset({"java"})
+# Extensions some grammar claims. Anything else is an explicit UNAVAILABLE rather
+# than a silent skip. Claimed but uninstalled is a separate, more precise message
+# from `salp.structural.diagnostic_for`, so this is only the coarse gate.
+_PARSEABLE = PARSEABLE_EXTENSIONS
