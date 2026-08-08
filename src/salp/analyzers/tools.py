@@ -181,7 +181,7 @@ def run_refactoring_miner_list(
                 report = json.loads(out.read_text(encoding="utf-8"))
                 # Even the -c command returns an array of commits, though it always 
                 # contains only one commits, hence ['commits'][0].
-                commits.append(tuple(report['commits'][0] or ()))
+                commits.append(report['commits'][0] or ())
             except (OSError, json.JSONDecodeError) as exc:
                 return f"could not read the RefactoringMiner report: {exc}"
     log.info(
