@@ -130,7 +130,66 @@ def run_refactoring_miner(
     )
     return commits
 
+@lru_cache(maxsize=32)
+def run_refactoring_miner_list(
+    jar: Path | None,
+    repo_dir: Path,
+    sha_list: list[str] | None = None,
+    cache_dir: Path | None = None,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> tuple[dict[str, Any], ...] | str:
+    """
+    Detects the refactorings for a list of commits. Uses the RefactoringMiner
+    "-c" command on each commit.
+    """
+    if jar is None:
+        return "tools.refactoringminer_jar is not configured"
+    if not Path(jar).exists():
+        return f"RefactoringMiner not found at {jar}"
+    if not os.access(jar, os.X_OK):
+        return f"RefactoringMiner at {jar} is not executable"
+    if not sha_list:
+        return "The commit list must have at list 1 commit"
+    if not shutil.which("java"):
+        return "java is not installed or not on PATH"
+    commits = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "refactorigns.json"
+    
+        for commit_sha in sha_list:
+            command = [
+                str(jar), "-c", str(Path(repo_dir).resolve()),
+                commit_sha, "-json", str(out)
+            ]
+            try:
+                proc = subprocess.run(
+                    command, capture_output=True, text=True, timeout=timeout, check = False
+                )
+            except subprocess.TimeoutExpired:
+                return (
+                    f"RefactoringMiner exceeded {timeout}s on {repo_dir.name}; raise "
+                    "tools.refactoringminer_timeout or disable it with --no-refactorings"
+                )
+            except OSError as exc:
+                return f"could not run RefactoringMiner: {exc}"
 
+            if proc.returncode != 0:
+                return f"RefactoringMiner exited {proc.returncode}: {proc.stderr.strip()[:200]}"
+            if not out.is_file():
+                return "RefactoringMiner produced no output file"
+            try:
+                report = json.loads(out.read_text(encoding="utf-8"))
+                # Even the -c command returns an array of commits, though it always 
+                # contains only one commits, hence ['commits'][0].
+                commits.append(tuple(report['commits'][0] or ()))
+            except (OSError, json.JSONDecodeError) as exc:
+                return f"could not read the RefactoringMiner report: {exc}"
+    log.info(
+        "%s: %d commit(s), %d refactoring(s)", repo_dir.name, len(commits),
+        sum(len(c.get("refactorings") or ()) for c in commits),
+    )
+    return commits
+  
 # --- tool versions, for provenance -------------------------------------------
 # Evidence is reproducible only under fixed tool versions, so every analyzer
 # backed by an external tool records the version actually in use rather than one
