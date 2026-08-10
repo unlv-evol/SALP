@@ -7,8 +7,8 @@ cannot see a node type cannot pick the wrong one.
 """
 
 from __future__ import annotations
-import subprocess
 
+import subprocess
 from typing import Any
 
 from salp.structural.grammars import (

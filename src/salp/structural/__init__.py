@@ -61,12 +61,12 @@ from salp.structural.syntax import (
     enclosing_method,
     is_import_region,
     is_in_method,
+    is_merge_commit,
     method_name,
     method_signature,
     node_text,
     parameter_type,
     sort_by_position,
-    is_merge_commit
 )
 
 __all__ = [
@@ -100,6 +100,7 @@ __all__ = [
     "invoked_methods",
     "is_import_region",
     "is_in_method",
+    "is_merge_commit",
     "locate",
     "locate_method",
     "method_name",
@@ -114,5 +115,4 @@ __all__ = [
     "referenced_classes",
     "sort_by_position",
     "to_ast_dict",
-    "is_merge_commit",
 ]

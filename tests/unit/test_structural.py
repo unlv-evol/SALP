@@ -18,6 +18,7 @@ from salp.structural import (
     imported_class_names,
     imports_of,
     invoked_methods,
+    is_merge_commit,
     locate,
     method_name,
     methods_overlapping,
@@ -26,7 +27,6 @@ from salp.structural import (
     parse,
     query,
     referenced_classes,
-    is_merge_commit,
 )
 
 pytestmark = pytest.mark.skipif(

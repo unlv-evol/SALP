@@ -25,6 +25,7 @@ from typing import Any
 
 from salp.config import get_logger
 from salp.structural import syntax
+
 log = get_logger(__name__)
 
 # RefactoringMiner walks every commit in the range, parsing every file at each,
