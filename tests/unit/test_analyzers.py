@@ -1,6 +1,5 @@
-"""Tests for RefactoringMiner related items and workflows
-
-RefactoringMiner outputs are compared for a variety of cases.
+"""Tests the functionalities in the analyzer directory.
+This includes GACPD-related items, tree-sitter items, and RefactoringMiner items.
 """
 import pytest
 import json
