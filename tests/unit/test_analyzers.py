@@ -32,7 +32,10 @@ def test_c_bc_command_result_equivalence(cfg):
     # Must have a GACPD output saved in data/GACPD and run the 
     # "salp -c configs/default.yaml fetch-repos" command.
     if not repo_dir(cfg.paths.repo_cache, "apache/kafka").is_dir():
-        print('passing test_c_bc_command_result_equivalence: no apache/kafka folder present in data/repos')
+        print(
+            'passing test_c_bc_command_result_equivalence: '
+            'no apache/kafka folder present in data/repos'
+        )
         return
     with open ('tests/data/Apache_Kafka_PR_12289_Commits_Info.json'
                ,  encoding = 'utf-8') as commit_file:
