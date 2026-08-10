@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from salp.config import get_logger
-
+from salp.structural import syntax
 log = get_logger(__name__)
 
 # RefactoringMiner walks every commit in the range, parsing every file at each,
@@ -157,6 +157,10 @@ def run_refactoring_miner_list(
         out = Path(tmp) / "refactorigns.json"
     
         for commit_sha in sha_list:
+            # Filtering out merge commits since their changes should not count in the refactorings
+            if syntax.is_merge_commit(commit_sha, str(Path(repo_dir).resolve())):
+                continue
+
             command = [
                 str(jar), "-c", str(Path(repo_dir).resolve()),
                 commit_sha, "-json", str(out)
@@ -180,7 +184,7 @@ def run_refactoring_miner_list(
             try:
                 report = json.loads(out.read_text(encoding="utf-8"))
                 # Even the -c command returns an array of commits, though it always 
-                # contains only one commits, hence ['commits'][0].
+                # contains only one commit, hence ['commits'][0].
                 commits.append(report['commits'][0] or ())
             except (OSError, json.JSONDecodeError) as exc:
                 return f"could not read the RefactoringMiner report: {exc}"
