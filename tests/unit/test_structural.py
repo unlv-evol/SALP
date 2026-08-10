@@ -26,6 +26,7 @@ from salp.structural import (
     parse,
     query,
     referenced_classes,
+    is_merge_commit,
 )
 
 pytestmark = pytest.mark.skipif(
@@ -198,3 +199,11 @@ def test_describe_outside_a_method_still_reports_file_level_context():
     meta = describe(locate(SOURCE, 3, 4, "java"), SOURCE)
     assert meta.package == "org.example.demo"
     assert meta.enclosing_class is None
+
+def test_merge_commit_detection():
+    # Tests on the SALP repo itself for convenience.
+    merge_commit_sha = "3f799862546c63c1802910164caae0294b007363"
+    non_merge_commit_sha = "b54887bb609e5a93e6749a66517b3771f58e8a9a"
+    repo_path= "./"
+    assert is_merge_commit(merge_commit_sha, repo_path) == 1
+    assert is_merge_commit(non_merge_commit_sha, repo_path) == 0

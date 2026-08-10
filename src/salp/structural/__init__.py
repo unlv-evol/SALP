@@ -66,6 +66,7 @@ from salp.structural.syntax import (
     node_text,
     parameter_type,
     sort_by_position,
+    is_merge_commit
 )
 
 __all__ = [
@@ -113,4 +114,5 @@ __all__ = [
     "referenced_classes",
     "sort_by_position",
     "to_ast_dict",
+    "is_merge_commit",
 ]

@@ -37,6 +37,7 @@ __all__ = [
     "parse",
     "query",
     "sort_by_position",
+    "is_merge_commit",
 ]
 
 
