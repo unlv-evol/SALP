@@ -31,6 +31,9 @@ def cfg():
 def test_c_bc_command_result_equivalence(cfg):
     # Must have a GACPD output saved in data/GACPD and run the 
     # "salp -c configs/default.yaml fetch-repos" command.
+    if not repo_dir(cfg.paths.repo_cache, "apache/kafka").is_dir():
+        print('passing test_c_bc_command_result_equivalence: no apache/kafka folder present in data/repos')
+        return
     with open ('tests/data/Apache_Kafka_PR_12289_Commits_Info.json'
                ,  encoding = 'utf-8') as commit_file:
         commits_info = json.loads(commit_file.read())
@@ -45,8 +48,6 @@ def test_c_bc_command_result_equivalence(cfg):
             cfg.paths.repo_cache / ".refactoring-cache",
             cfg.tools.refactoringminer_timeout,
         )
-        with open('newtest.json', 'w', encoding = 'utf-8') as outfile:
-            json.dump(bc_refactorings, outfile, indent = 2)
         # Getting the "-c" command refactorings
         sha_list = tuple(x['sha'] for x in commits_info)
         c_refactorings = tools.run_refactoring_miner_list(
@@ -70,6 +71,6 @@ def test_c_bc_command_result_equivalence(cfg):
                 open(c_refactorings_temp_json,  encoding = 'utf-8') as c_in_file,
                 open (bc_refactorings_temp_json,  encoding = 'utf-8') as bc_in_file,
             ):
-                    c_json = json.loads(c_in_file.read())
-                    bc_json = json.loads(bc_in_file.read())
-                    assert c_json == bc_json
+                c_json = json.loads(c_in_file.read())
+                bc_json = json.loads(bc_in_file.read())
+                assert c_json == bc_json
