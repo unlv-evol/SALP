@@ -186,14 +186,14 @@ def run_refactoring_miner_list(
                 report = json.loads(out.read_text(encoding="utf-8"))
                 # Even the -c command returns an array of commits, though it always 
                 # contains only one commit, hence ['commits'][0].
-                commits.append(report['commits'][0] or ())
+                commits.append(report['commits'][0] or {})
             except (OSError, json.JSONDecodeError) as exc:
                 return f"could not read the RefactoringMiner report: {exc}"
     log.info(
         "%s: %d commit(s), %d refactoring(s)", repo_dir.name, len(commits),
         sum(len(c.get("refactorings") or ()) for c in commits),
     )
-    return commits
+    return tuple(commits)
   
 # --- tool versions, for provenance -------------------------------------------
 # Evidence is reproducible only under fixed tool versions, so every analyzer
