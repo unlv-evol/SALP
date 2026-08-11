@@ -7,7 +7,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import yaml
 
 from salp.analyzers import tools
 from salp.config import Config
@@ -29,16 +28,15 @@ def test_c_bc_command_result_equivalence(cfg):
     # Must have a GACPD output saved in data/GACPD and run the 
     # "salp -c configs/default.yaml fetch-repos" command.
     if not repo_dir(cfg.paths.repo_cache, "apache/kafka").is_dir():
-        print(
+        pytest.skip(
             'skipping test_c_bc_command_result_equivalence: '
             'no apache/kafka folder present in data/repos'
         )
-        return
+
     if not cfg.tools.refactoringminer_jar.is_file():
-        print('skipping test_c_bc_command_result_equivalence: '
+        pytest.skip('skipping test_c_bc_command_result_equivalence: '
               'RefactoringMiner not found in the specified directory')
-        return
-    
+
     with open ('tests/data/Apache_Kafka_PR_12289_Commits_Info.json'
                ,  encoding = 'utf-8') as commit_file:
         commits_info = json.loads(commit_file.read())
