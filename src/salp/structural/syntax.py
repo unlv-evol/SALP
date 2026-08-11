@@ -8,7 +8,6 @@ cannot see a node type cannot pick the wrong one.
 
 from __future__ import annotations
 
-import subprocess
 from typing import Any
 
 from salp.structural.grammars import (
@@ -37,7 +36,6 @@ __all__ = [
     "parse",
     "query",
     "sort_by_position",
-    "is_merge_commit",
 ]
 
 
@@ -182,25 +180,3 @@ def is_import_region(source: str, start_line: int, end_line: int, grammar: Gramm
             return False
         seen = True
     return seen
-
-
-# --- commits ------------------------------------------------------------
-def is_merge_commit(commit_sha: str, repo_path: str = ".") -> bool:
-    """
-    Returns True if commit_sha is a merge commit (has > 1 parent), False otherwise. If commit
-    sha is a false value, this function returns False.
-    """
-    cmd = ["git", "log", "-1", "--format=%P", commit_sha]
-    try:
-        result = subprocess.run(
-            cmd, 
-            cwd=repo_path, 
-            capture_output=True, 
-            text=True, 
-            check=True
-        )
-    except subprocess.CalledProcessError:
-        print('yeah error happened')
-        return False 
-    parents = result.stdout.strip().split()
-    return len(parents) > 1

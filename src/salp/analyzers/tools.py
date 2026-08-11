@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from salp.config import get_logger
-from salp.structural import syntax
+from salp.repos import git
 
 log = get_logger(__name__)
 
@@ -159,7 +159,7 @@ def run_refactoring_miner_list(
     
         for commit_sha in sha_list:
             # Filtering out merge commits since their changes should not count in the refactorings
-            if syntax.is_merge_commit(commit_sha, str(Path(repo_dir).resolve())):
+            if git.is_merge_commit(commit_sha, str(Path(repo_dir).resolve())):
                 continue
 
             command = [

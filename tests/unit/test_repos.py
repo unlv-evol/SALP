@@ -22,6 +22,7 @@ from salp.repos import (
     git_available,
     has_pull_request_ref,
     is_cloned,
+    is_merge_commit,
     list_tree,
     read_file,
     repo_dir,
@@ -156,3 +157,11 @@ def test_reading_against_an_unresolved_pin_returns_nothing(cache_dir: Path):
     assert read_file(cache_dir, unresolved, "src.java") is None
     assert list_tree(cache_dir, unresolved) == []
     assert read_file(cache_dir, None, "src.java") is None
+
+def test_merge_commit_detection():
+    # Tests on the SALP repo itself for convenience.
+    merge_commit_sha = "3f799862546c63c1802910164caae0294b007363"
+    non_merge_commit_sha = "b54887bb609e5a93e6749a66517b3771f58e8a9a"
+    repo_path= "./"
+    assert is_merge_commit(merge_commit_sha, repo_path) == 1
+    assert is_merge_commit(non_merge_commit_sha, repo_path) == 0

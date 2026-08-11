@@ -11,6 +11,9 @@ from salp.config import get_logger
 
 log = get_logger(__name__)
 
+__all__ =[
+    "is_merge_commit"
+]
 
 # Network operations are slow but bounded; a hung fetch must not wedge a run.
 _NETWORK_TIMEOUT = 1800
@@ -64,3 +67,23 @@ def run(
 def run_network(*args: str, cwd: Path | None = None) -> GitResult:
     """Run a git command that talks to a remote."""
     return run(*args, cwd=cwd, timeout=_NETWORK_TIMEOUT)
+
+def is_merge_commit(commit_sha: str, repo_path: str = ".") -> bool:
+    """
+    Returns True if commit_sha is a merge commit (has > 1 parent), False otherwise. If commit
+    sha is a false value, this function returns False.
+    """
+    cmd = ["git", "log", "-1", "--format=%P", commit_sha]
+    try:
+        result = subprocess.run(
+            cmd, 
+            cwd=repo_path, 
+            capture_output=True, 
+            text=True, 
+            check=True
+        )
+    except subprocess.CalledProcessError:
+        print('yeah error happened')
+        return False 
+    parents = result.stdout.strip().split()
+    return len(parents) > 1
