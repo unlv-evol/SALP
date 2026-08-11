@@ -33,10 +33,15 @@ def test_c_bc_command_result_equivalence(cfg):
     # "salp -c configs/default.yaml fetch-repos" command.
     if not repo_dir(cfg.paths.repo_cache, "apache/kafka").is_dir():
         print(
-            'passing test_c_bc_command_result_equivalence: '
+            'skipping test_c_bc_command_result_equivalence: '
             'no apache/kafka folder present in data/repos'
         )
         return
+    if not cfg.tools.refactoringminer_jar.is_file():
+        print('skipping test_c_bc_command_result_equivalence: '
+              'RefactoringMiner not found in the specified directory')
+        return
+    
     with open ('tests/data/Apache_Kafka_PR_12289_Commits_Info.json'
                ,  encoding = 'utf-8') as commit_file:
         commits_info = json.loads(commit_file.read())
