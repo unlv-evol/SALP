@@ -179,6 +179,9 @@ def run_refactoring_miner_list(
                 return f"could not run RefactoringMiner: {exc}"
 
             if proc.returncode != 0:
+                if proc.returncode == 255:
+                    print(f'WARNING: The RefactoringMiner batch script at'
+                          f' {str(jar)} contains a line that exceeds the command line limit.')
                 return f"RefactoringMiner exited {proc.returncode}: {proc.stderr.strip()[:200]}"
             if not out.is_file():
                 return "RefactoringMiner produced no output file"
