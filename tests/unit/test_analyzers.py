@@ -19,11 +19,8 @@ from salp.repos import (
 @pytest.fixture
 def cfg():
     """Provides a default Config instance to tests."""
-    with open('configs/default.yaml') as yaml_file:
-        yaml_content = yaml.safe_load(yaml_file)
-        config = Config()
-        config.tools.refactoringminer_jar = Path(yaml_content["tools"]["refactoringminer_jar"])
-        config.tools.refactoringminer_timeout = yaml_content["tools"]["refactoringminer_timeout"]
+    yaml_path = Path('./configs/default.yaml')
+    config = Config.load(yaml_path)
 
     return config
 
