@@ -158,6 +158,8 @@ def run_refactoring_miner_list(
         out = Path(tmp) / "refactorigns.json"
     
         for commit_sha in sha_list:
+            if not git.is_commit_present(commit_sha, Path(repo_dir).resolve()):
+                return(f"Commit {commit_sha} not present in {repo_dir.name}")
             # Filtering out merge commits since their changes should not count in the refactorings
             if git.is_merge_commit(commit_sha, Path(repo_dir).resolve()):
                 continue
@@ -196,6 +198,7 @@ def run_refactoring_miner_list(
         "%s: %d commit(s), %d refactoring(s)", repo_dir.name, len(commits),
         sum(len(c.get("refactorings") or ()) for c in commits),
     )
+
     return tuple(commits)
   
 # --- tool versions, for provenance -------------------------------------------
