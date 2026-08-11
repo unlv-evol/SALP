@@ -68,27 +68,30 @@ def run_network(*args: str, cwd: Path | None = None) -> GitResult:
     """Run a git command that talks to a remote."""
     return run(*args, cwd=cwd, timeout=_NETWORK_TIMEOUT)
 
-def is_merge_commit(commit_sha: str, repo_path: str = ".") -> bool:
+def is_merge_commit(commit_sha: str = "", repo_dir: Path | None = None) -> bool:
     """
     Returns True if commit_sha is a merge commit (has > 1 parent), False otherwise. If commit
     sha is a false value, this function returns False.
     """
+    if commit_sha == "":
+        return False
+    if not repo_dir:
+        return False
     cmd = ["git", "log", "-1", "--format=%P", commit_sha]
     try:
         result = subprocess.run(
             cmd, 
-            cwd=repo_path, 
+            cwd= str(repo_dir), 
             capture_output=True, 
             text=True, 
             check=True
         )
     except subprocess.CalledProcessError:
-        print('yeah error happened')
         return False 
     parents = result.stdout.strip().split()
     return len(parents) > 1
 
-def is_commit_present(commit_sha:str = "", repo_dir:Path = None) -> bool:
+def is_commit_present(commit_sha:str = "", repo_dir:Path | None = None) -> bool:
     if commit_sha == "":
         return False
     if not repo_dir:
@@ -102,8 +105,6 @@ def is_commit_present(commit_sha:str = "", repo_dir:Path = None) -> bool:
     ]
     result = subprocess.run(command, cwd = str(repo_dir), text= True)
     code = result.returncode
-    if code == 0:
-        return True
-    else:
-        return False
+
+    return code == 0
     

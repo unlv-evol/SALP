@@ -159,7 +159,7 @@ def run_refactoring_miner_list(
     
         for commit_sha in sha_list:
             # Filtering out merge commits since their changes should not count in the refactorings
-            if git.is_merge_commit(commit_sha, str(Path(repo_dir).resolve())):
+            if git.is_merge_commit(commit_sha, Path(repo_dir).resolve()):
                 continue
 
             command = [

@@ -162,6 +162,6 @@ def test_merge_commit_detection():
     # Tests on the SALP repo itself for convenience.
     merge_commit_sha = "3f799862546c63c1802910164caae0294b007363"
     non_merge_commit_sha = "b54887bb609e5a93e6749a66517b3771f58e8a9a"
-    repo_path= "./"
+    repo_path= Path("./")
     assert is_merge_commit(merge_commit_sha, repo_path) == 1
     assert is_merge_commit(non_merge_commit_sha, repo_path) == 0
