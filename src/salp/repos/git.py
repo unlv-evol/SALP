@@ -87,3 +87,23 @@ def is_merge_commit(commit_sha: str, repo_path: str = ".") -> bool:
         return False 
     parents = result.stdout.strip().split()
     return len(parents) > 1
+
+def is_commit_present(commit_sha:str = "", repo_dir:Path = None) -> bool:
+    if commit_sha == "":
+        return False
+    if not repo_dir:
+        return False
+    
+    command = [
+        'git',
+        'cat-file',
+        '-e',
+        commit_sha
+    ]
+    result = subprocess.run(command, cwd = str(repo_dir), text= True)
+    code = result.returncode
+    if code == 0:
+        return True
+    else:
+        return False
+    
