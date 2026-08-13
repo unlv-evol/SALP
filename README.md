@@ -373,7 +373,7 @@ All eight evidence categories are implemented. Foundational evidence comes from
 GACPD; structural, surrounding, compatibility, and verification are recovered
 from the whole files and repository trees at their pinned commits; refactoring
 runs RefactoringMiner over the target's divergence-to-cutoff drift when
-`tools.refactoringminer_jar` is configured, and reports an explicit gap when it
+`tools.refactoringminer_win` or `tools.refactoringminer_unix` is configured, and reports an explicit gap when it
 is not.
 
 On the reference sample — 11 SAPs, 25 hunks, 1,450 required information elements:

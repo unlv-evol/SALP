@@ -263,7 +263,7 @@ The RefactoringMiner command shapes were taken verbatim from
 
 The `-bc` form was chosen: both endpoints are already resolved as repository
 state pins, so it needs no token. RefactoringMiner 3.1.4 ships as a distribution
-(`bin/` launcher plus `lib/`), not a fat jar, so `tools.refactoringminer_jar`
+(`bin/` launcher plus `lib/`), not a fat jar, so `tools.refactoringminer_win` or `tools.refactoringminer_unix`
 points at the launcher and the version is read from the distribution directory
 name.
 

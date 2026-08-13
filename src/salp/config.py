@@ -8,6 +8,7 @@ change is explicit and versioned.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 import yaml
@@ -30,11 +31,18 @@ class Tools(BaseModel):
     investigation is an information gap and not an error.
     """
 
-    refactoringminer_jar: Path | None = None
+    refactoringminer_unix: Path | None = None
+    refactoringminer_win: Path | None = None
     tree_sitter_lib: Path | None = None
     # RefactoringMiner cost tracks repository size as much as commit count; a
     # slow repository is bounded rather than allowed to hang a run.
     refactoringminer_timeout: int = 900
+    def get_refactoringminer_jar(self) -> Path | None:
+        """Retruns OS-specific RefactoringMiner path"""
+        if os.name == "nt":
+            return self.refactoringminer_win
+        else:
+            return self.refactoringminer_unix
 
 
 class Config(BaseModel):

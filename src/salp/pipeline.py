@@ -219,7 +219,7 @@ def run(config: Config) -> int:
             refactorings = "refactoring detection disabled (detect_refactorings=false)"
         else:
             refactorings = run_refactoring_miner(
-                config.tools.refactoringminer_jar,
+                config.tools.get_refactoringminer_jar(),
                 repo_dir(config.paths.repo_cache, pr.metadata.target_repo or ""),
                 divergence_pin.commit if divergence_pin else None,
                 target_pin.commit if target_pin else None,
@@ -239,7 +239,7 @@ def run(config: Config) -> int:
                 target_pin=target_pin,
                 cache_dir=config.paths.repo_cache,
                 refactorings=refactorings,
-                refactoringminer_jar=config.tools.refactoringminer_jar,
+                refactoringminer_jar=config.tools.get_refactoringminer_jar(),
             )
 
             errors = validate_sap(sap)
