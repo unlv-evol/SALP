@@ -150,7 +150,7 @@ def run_refactoring_miner_list(
     if not os.access(jar, os.X_OK):
         return f"RefactoringMiner at {jar} is not executable"
     if not sha_list:
-        return "The commit list must have at list 1 commit"
+        return ()
     if not shutil.which("java"):
         return "java is not installed or not on PATH"
     commits = []
