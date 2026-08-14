@@ -135,8 +135,7 @@ def run_refactoring_miner(
 def run_refactoring_miner_list(
     jar: Path | None,
     repo_dir: Path,
-    sha_list: list[str] | None = None,
-    cache_dir: Path | None = None,
+    sha_list: tuple[str] | None = None,
     timeout: int = DEFAULT_TIMEOUT,
 ) -> tuple[dict[str, Any], ...] | str:
     """
