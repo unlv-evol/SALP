@@ -100,6 +100,8 @@ All notable changes to this project are documented here, following
 - Refactoring results correlated left and right locations by index
   unconditionally; on a real run half the reports have arrays of different
   lengths, so pairing is now applied only where it holds.
+- RefactoringMiner batch script not working on Windows. Now the right batch file is 
+  automatically used on UNIX-based OS' and windows.
 
 ### Changed
 
