@@ -40,6 +40,8 @@ All notable changes to this project are documented here, following
 - `structural.locate_method` finds a method by signature correspondence, in three
   recorded steps — exact signature, name and arity, name alone — so a weaker
   match is visible rather than passed off as an exact one.
+- The ability to run RefactoringMiner per commit and filter out unwanted commits (such as
+  merge commits).
 
 - **Scala support.** `structural/grammars.py` declares the node vocabulary per
   language — Java and Scala — and every structural analysis is written against
