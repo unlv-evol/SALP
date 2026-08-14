@@ -154,9 +154,10 @@ def run_refactoring_miner_list(
         return "java is not installed or not on PATH"
     commits = []
     with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp) / "refactorigns.json"
+        out = Path(tmp) / "refactorings.json"
     
         for commit_sha in sha_list:
+            out.unlink(missing_ok=True)
             if not git.is_commit_present(commit_sha, Path(repo_dir).resolve()):
                 return(f"Commit {commit_sha} not present in {repo_dir.name}")
             # Filtering out merge commits since their changes should not count in the refactorings
@@ -190,7 +191,10 @@ def run_refactoring_miner_list(
                 report = json.loads(out.read_text(encoding="utf-8"))
                 # Even the -c command returns an array of commits, though it always 
                 # contains only one commit, hence ['commits'][0].
-                commits.append(report['commits'][0] or {})
+                if len(report['commits']) > 0:
+                    commits.append(report['commits'][0])
+                else:
+                    commits.append({})
             except (OSError, json.JSONDecodeError) as exc:
                 return f"could not read the RefactoringMiner report: {exc}"
     log.info(
