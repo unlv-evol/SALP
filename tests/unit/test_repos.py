@@ -9,6 +9,7 @@ blob without a working tree -- is exercised. No network is involved: the
 from __future__ import annotations
 
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -158,10 +159,48 @@ def test_reading_against_an_unresolved_pin_returns_nothing(cache_dir: Path):
     assert list_tree(cache_dir, unresolved) == []
     assert read_file(cache_dir, None, "src.java") is None
 
+# --- commit-level checks -------------------------------------------------
 def test_merge_commit_detection():
-    # Tests on the SALP repo itself for convenience.
-    merge_commit_sha = "3f799862546c63c1802910164caae0294b007363"
-    non_merge_commit_sha = "b54887bb609e5a93e6749a66517b3771f58e8a9a"
-    repo_path= Path("./")
-    assert is_merge_commit(merge_commit_sha, repo_path) == 1
-    assert is_merge_commit(non_merge_commit_sha, repo_path) == 0
+    with tempfile.TemporaryDirectory() as temp_dir:
+        repo_path = temp_dir
+
+        def git(command: str = ""):
+            args = command.split(' ')
+            result = subprocess.run(
+                ["git"] + list(args),
+                cwd=repo_path,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip()
+
+        # Initiating repository with a dummy user
+        git("init --initial-branch=main")
+        git("config user.name test_user")
+        git("config user.email abc@test.com")
+
+        # Creating initial commit on main
+        file1 = Path(repo_path)/"file1.txt"
+        file1.write_text("This is the initial commit's content")
+        git("add file1.txt")
+        git('commit -m "initial_commit"')
+        initial_sha = git("rev-parse HEAD")
+
+        # Creating feature branch and adding commits to it
+        git("checkout -b feature-branch")
+        file2 = Path(repo_path)/"file2.txt"
+        file2.write_text("Feature content")
+        git("add file2.txt")
+        git('commit -m "feature_commit"')
+        feature_sha = git("rev-parse HEAD")
+
+        # Switching back to main and merging the feature branch
+        git("checkout main")
+        git('merge --no-ff feature-branch -m "merge_feature_branch"')
+        merge_sha = git("rev-parse HEAD")
+
+        # Testing the results
+        assert not is_merge_commit(initial_sha, Path(repo_path))
+        assert not is_merge_commit(feature_sha, Path(repo_path))
+        assert is_merge_commit(merge_sha, Path(repo_path))
