@@ -1,0 +1,99 @@
+name: Evidence gap
+description: An analyzer reports the wrong evidence state, or recovers less than it could
+title: "[evidence]: "
+labels: ["evidence", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when the pipeline runs cleanly but an evidence state is wrong —
+        `UNAVAILABLE` where the evidence exists, `VERIFIED_ABSENT` where the
+        investigation could not actually run, or a representation score that does
+        not match what was recovered.
+
+        Every element carries a diagnostic explaining its state. Quoting it is
+        usually enough to locate the cause.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Evidence category
+      options:
+        - source_change
+        - target_localization
+        - function_transformation
+        - structural
+        - refactoring
+        - compatibility
+        - verification
+        - surrounding
+        - standalone
+    validations:
+      required: true
+
+  - type: input
+    id: element
+    attributes:
+      label: Required element
+      description: The element id, e.g. `alignment_confidence` or `covering_tests`.
+      placeholder: source_repo_revision
+    validations:
+      required: true
+
+  - type: dropdown
+    id: observed
+    attributes:
+      label: State reported
+      options: [PRESENT, VERIFIED_ABSENT, UNAVAILABLE]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: expected
+    attributes:
+      label: State expected
+      options: [PRESENT, VERIFIED_ABSENT, UNAVAILABLE]
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic and evidence document
+      description: >
+        The `provenance.diagnostics` string for that element, plus the relevant
+        part of the evidence document
+        (`data/out/<pair>/PR-<n>/sap-<file>/hunks/<hunk>/<category>.json`).
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why the expected state is correct
+      description: >
+        What evidence exists that the analyzer missed, or what makes the recovered
+        evidence insufficient? Point at the source file, commit, or GACPD artifact
+        that shows it.
+    validations:
+      required: true
+
+  - type: input
+    id: sample
+    attributes:
+      label: Sample
+      description: Repository pair and pull request this came from.
+      placeholder: apache/kafka -> linkedin/kafka, PR 12535, CombinedKey.java, H-1
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - label: Installed with the `structural` extra (`make dev`)
+        - label: "`salp fetch-repos` has run and the clone exists under `data/repos/`"
+        - label: The repository-state pin resolved to a commit (not date-based)
+        - label: A RefactoringMiner jar is configured (only relevant to `refactoring`)

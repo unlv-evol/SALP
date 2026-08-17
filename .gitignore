@@ -216,3 +216,87 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# General macOS operating system files
+.DS_Store
+.localized
+__MACOSX/
+.AppleDouble
+.LSOverride
+Icon
+
+# Thumbnails and resource forks
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# iCloud generated files
+*.icloud
+
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Folder configuration file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
+# Windows Installer and dump files
+*.stackdump
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Linux System Files
+.directory
+.Trash-*
+.fuse_hidden*
+
+# Compiled Linux Binaries (No extension)
+# Note: It is best practice to move compiled binaries into a dedicated bin/ folder.
+# This prevents git from accidentally tracking them.
+bin/
+*.out
+*.o
+*.a
+*.so
+
+# Core dumps
+core
+
+# --- SALP ---------------------------------------------------------------
+# Real GACPD runs carry whole source trees; external tools are large,
+# platform-specific binaries. Both are kept locally, never committed.
+data/gacpd/*
+!data/gacpd/.gitkeep
+!data/gacpd/README.md
+
+data/repos/*
+!data/repos/.gitkeep
+!data/repos/README.md
+
+tools/**
+!tools/README.md
+!tools/*/
+!tools/*/.gitkeep
+
+# Pipeline output
+/out/
+data/out/
+.refactoring-cache/

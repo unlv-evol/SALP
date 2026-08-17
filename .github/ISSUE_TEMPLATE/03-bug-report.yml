@@ -1,0 +1,80 @@
+name: Bug report
+description: The pipeline crashes, produces invalid output, or behaves inconsistently
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a wrong *evidence state* use **Evidence gap**; for an unparsed GACPD
+        record use **Parser gap**. This one is for everything else: crashes,
+        malformed output, dangling references, or non-reproducible runs.
+
+  - type: dropdown
+    id: command
+    attributes:
+      label: Command
+      options:
+        - salp run
+        - salp fetch-repos
+        - salp categories
+        - library use (imported directly)
+        - make check / tests
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the full traceback or the incorrect output.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: >
+        The exact commands. If it needs a GACPD sample, say which repository pair
+        and pull request — and whether it reproduces on a fresh `data/out/`.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`salp --version`, plus the commit if installed from source."
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: >
+        Python version, OS, and the output of `pip list | grep -iE
+        'tree-sitter|pydantic|salp'`. Mention your git version if the failure is
+        in `fetch-repos`.
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: Installed with the `structural` extra (`make dev`)
+        - label: "`make check` passes on a clean checkout of `main`"
+        - label: It reproduces on a second run (rather than being a one-off)

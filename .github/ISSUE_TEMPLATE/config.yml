@@ -1,0 +1,13 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Specification and design questions
+    url: https://github.com/unlv-evol/SALP/blob/main/README.md
+    about: >
+      How Coverage, Fidelity, and Readiness are defined, and what the evidence
+      states mean. Read this before filing an evidence gap.
+  - name: Contributing guide
+    url: https://github.com/unlv-evol/SALP/blob/main/CONTRIBUTING.md
+    about: Setup, layering rules, and the four rules the evidence model depends on.
+  - name: GACPD record formats
+    url: https://github.com/unlv-evol/SALP/blob/main/data/gacpd/README.md
+    about: What each record contains and how it is parsed — check here before filing a parser gap.
