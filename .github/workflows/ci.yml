@@ -32,13 +32,28 @@ jobs:
         run: mypy
 
   test:
-    name: tests (py${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: tests (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         python-version: ["3.11", "3.12"]
+        # Windows is tested because the pipeline shells out to git and to
+        # RefactoringMiner, and both differ there: the miner ships a separate
+        # `.bat` launcher, and a subprocess environment assembled by hand rather
+        # than inherited loses PATH and SYSTEMROOT. Neither showed up on Linux.
+        # One version is enough to catch platform breakage; the matrix above
+        # covers the language.
+        include:
+          - os: windows-latest
+            python-version: "3.12"
     steps:
+      # Check out with LF endings on every platform. Git for Windows converts to
+      # CRLF by default, which would make fixture text differ by platform and
+      # turn any exact-content assertion into a false failure.
+      - name: keep line endings as committed
+        run: git config --global core.autocrlf input
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -51,7 +66,7 @@ jobs:
       - name: pytest
         run: pytest --cov=salp --cov-report=term-missing --cov-report=xml
       - name: upload coverage
-        if: matrix.python-version == '3.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
