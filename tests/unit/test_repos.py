@@ -9,7 +9,6 @@ blob without a working tree -- is exercised. No network is involved: the
 from __future__ import annotations
 
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -23,6 +22,7 @@ from salp.repos import (
     git_available,
     has_pull_request_ref,
     is_cloned,
+    is_commit_present,
     is_merge_commit,
     list_tree,
     read_file,
@@ -159,48 +159,78 @@ def test_reading_against_an_unresolved_pin_returns_nothing(cache_dir: Path):
     assert list_tree(cache_dir, unresolved) == []
     assert read_file(cache_dir, None, "src.java") is None
 
-# --- commit-level checks -------------------------------------------------
-def test_merge_commit_detection():
-    with tempfile.TemporaryDirectory() as temp_dir:
-        repo_path = temp_dir
 
-        def git(command: str = ""):
-            args = command.split(' ')
-            result = subprocess.run(
-                ["git"] + list(args),
-                cwd=repo_path,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            return result.stdout.strip()
+# --- commit-level predicates -------------------------------------------------
+@pytest.fixture
+def branched_repo(tmp_path: Path) -> tuple[Path, str, str, str]:
+    """A repository with an ordinary commit, a branch commit, and a merge.
 
-        # Initiating repository with a dummy user
-        git("init --initial-branch=main")
-        git("config user.name test_user")
-        git("config user.email abc@test.com")
+    Built here rather than resolved against SALP's own history: CI checks out at
+    depth 1, so a hardcoded SHA is simply absent there, and any SHA would break
+    the moment the branch is rebased. Identity is set per-invocation, since a
+    runner has no global git identity.
+    """
+    repo = tmp_path / "branched"
+    repo.mkdir()
 
-        # Creating initial commit on main
-        file1 = Path(repo_path)/"file1.txt"
-        file1.write_text("This is the initial commit's content")
-        git("add file1.txt")
-        git('commit -m "initial_commit"')
-        initial_sha = git("rev-parse HEAD")
+    def git(*args: str) -> str:
+        result = subprocess.run(
+            ["git", "-c", "user.name=SALP Test", "-c", "user.email=test@salp.invalid",
+             "-c", "commit.gpgsign=false", *args],
+            cwd=repo, capture_output=True, text=True, check=True,
+        )
+        return result.stdout.strip()
 
-        # Creating feature branch and adding commits to it
-        git("checkout -b feature-branch")
-        file2 = Path(repo_path)/"file2.txt"
-        file2.write_text("Feature content")
-        git("add file2.txt")
-        git('commit -m "feature_commit"')
-        feature_sha = git("rev-parse HEAD")
+    git("init", "-q", "--initial-branch=main")
 
-        # Switching back to main and merging the feature branch
-        git("checkout main")
-        git('merge --no-ff feature-branch -m "merge_feature_branch"')
-        merge_sha = git("rev-parse HEAD")
+    (repo / "file1.txt").write_text("initial\n")
+    git("add", "file1.txt")
+    git("commit", "-q", "-m", "initial commit")
+    initial = git("rev-parse", "HEAD")
 
-        # Testing the results
-        assert not is_merge_commit(initial_sha, Path(repo_path))
-        assert not is_merge_commit(feature_sha, Path(repo_path))
-        assert is_merge_commit(merge_sha, Path(repo_path))
+    git("checkout", "-q", "-b", "feature")
+    (repo / "file2.txt").write_text("feature\n")
+    git("add", "file2.txt")
+    git("commit", "-q", "-m", "feature commit")
+    feature = git("rev-parse", "HEAD")
+
+    git("checkout", "-q", "main")
+    git("merge", "-q", "--no-ff", "feature", "-m", "merge feature")
+    merge = git("rev-parse", "HEAD")
+
+    return repo, initial, feature, merge
+
+
+def test_a_merge_commit_is_distinguished_from_an_ordinary_one(branched_repo):
+    repo, initial, feature, merge = branched_repo
+    assert is_merge_commit(merge, repo) is True
+    assert is_merge_commit(initial, repo) is False
+    assert is_merge_commit(feature, repo) is False
+
+
+def test_a_commit_that_is_not_there_is_neither_present_nor_a_merge(branched_repo):
+    """An absent commit must not read as a merge, and must be reported absent.
+
+    Callers use `is_commit_present` to keep analysis off the network, so a wrong
+    answer here has consequences beyond this predicate.
+    """
+    repo, *_ = branched_repo
+    assert is_commit_present("0" * 40, repo) is False
+    assert is_merge_commit("0" * 40, repo) is False
+
+
+def test_present_rejects_an_object_that_is_not_a_commit(branched_repo):
+    """A hexadecimal string can name a blob; a commit-level analysis cannot use one."""
+    repo, initial, _, _ = branched_repo
+    blob = subprocess.run(
+        ["git", "rev-parse", f"{initial}:file1.txt"],
+        cwd=repo, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert is_commit_present(initial, repo) is True
+    assert is_commit_present(blob, repo) is False
+
+
+def test_the_predicates_reject_an_empty_sha(branched_repo):
+    repo, *_ = branched_repo
+    assert is_commit_present("", repo) is False
+    assert is_merge_commit("", repo) is False

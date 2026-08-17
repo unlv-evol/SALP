@@ -11,9 +11,6 @@ from salp.config import get_logger
 
 log = get_logger(__name__)
 
-__all__ =[
-    "is_merge_commit"
-]
 
 # Network operations are slow but bounded; a hung fetch must not wedge a run.
 _NETWORK_TIMEOUT = 1800
@@ -68,43 +65,37 @@ def run_network(*args: str, cwd: Path | None = None) -> GitResult:
     """Run a git command that talks to a remote."""
     return run(*args, cwd=cwd, timeout=_NETWORK_TIMEOUT)
 
-def is_merge_commit(commit_sha: str = "", repo_dir: Path | None = None) -> bool:
-    """
-    Returns True if commit_sha is a merge commit (has > 1 parent), False otherwise. If commit
-    sha is a false value, this function returns False.
-    """
-    if commit_sha == "":
-        return False
-    if not repo_dir:
-        return False
-    cmd = ["git", "log", "-1", "--format=%P", commit_sha]
-    try:
-        result = subprocess.run(
-            cmd, 
-            cwd= str(repo_dir), 
-            capture_output=True, 
-            text=True, 
-            check=True
-        )
-    except subprocess.CalledProcessError:
-        return False 
-    parents = result.stdout.strip().split()
-    return len(parents) > 1
 
-def is_commit_present(commit_sha:str = "", repo_dir:Path | None = None) -> bool:
-    if commit_sha == "":
-        return False
-    if not repo_dir:
-        return False
-    
-    command = [
-        'git',
-        'cat-file',
-        '-e',
-        commit_sha
-    ]
-    result = subprocess.run(command, cwd = str(repo_dir), text= True)
-    code = result.returncode
+# --- commit-level predicates ---------------------------------------------------
+def is_commit_present(commit_sha: str, repo_dir: Path) -> bool:
+    """Whether a commit object exists in a repository.
 
-    return code == 0
-    
+    ``^{commit}`` rather than a bare object check: a hexadecimal string can name
+    a blob or a tree, and neither is something a commit-level analysis can use.
+
+    Callers rely on this to keep analysis local. See the note in
+    ``analyzers/tools.py`` on RefactoringMiner's ``-c`` command, which falls back
+    to the network for a commit it cannot find.
+    """
+    if not commit_sha:
+        return False
+    return run("cat-file", "-e", f"{commit_sha}^{{commit}}", cwd=repo_dir).ok
+
+
+def is_merge_commit(commit_sha: str, repo_dir: Path) -> bool:
+    """Whether a commit has more than one parent.
+
+    A merge's diff attributes every reconciled change to the merge itself, so
+    counting it would credit a landing site with refactorings no one performed.
+
+    Returns False when the commit cannot be read at all -- absent, or not a
+    commit. That is deliberately indistinguishable from "not a merge" because
+    the answer is only ever used to *skip* work; use ``is_commit_present`` first
+    where the difference matters.
+    """
+    if not commit_sha:
+        return False
+    result = run("log", "-1", "--format=%P", commit_sha, cwd=repo_dir)
+    if not result.ok:
+        return False
+    return len(result.text.split()) > 1

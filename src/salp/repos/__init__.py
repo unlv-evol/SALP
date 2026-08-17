@@ -29,6 +29,7 @@ from salp.repos.files import (
 from salp.repos.git import (
     GitResult,
     git_available,
+    is_commit_present,
     is_merge_commit,
 )
 from salp.repos.pins import (
@@ -50,6 +51,7 @@ __all__ = [
     "grep_files",
     "has_pull_request_ref",
     "is_cloned",
+    "is_commit_present",
     "is_merge_commit",
     "is_slug",
     "list_tree",
