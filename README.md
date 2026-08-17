@@ -275,6 +275,15 @@ calls**, no token, and no rate limit:
 | Target commit | `git rev-list -1 --before=<cutoff> HEAD` |
 | File at a pin | `git show <sha>:<path>`, no working tree checked out |
 
+One external tool has to be actively held to this. Given a commit the local clone
+does not contain, RefactoringMiner's `-c` command does not fail — it downloads
+`https://github.com/<owner>/<repo>/archive/<sha>.zip` for that commit and its
+parent, unzips each into the working directory, and exits 0 reporting no
+refactorings. `run_refactoring_miner_list` therefore checks
+`repos.is_commit_present` before every invocation and returns a diagnostic
+instead. That check is not redundant, and there is a test in
+`tests/integration/test_tooling.py` asserting it stays.
+
 `fetch-repos` is the only step that touches the network; `run` reads the cache
 locally. A missing clone is an information gap, not an error: the pin stays
 date-based with a diagnostic naming the fix, and the affected element is

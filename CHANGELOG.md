@@ -40,8 +40,16 @@ All notable changes to this project are documented here, following
 - `structural.locate_method` finds a method by signature correspondence, in three
   recorded steps — exact signature, name and arity, name alone — so a weaker
   match is visible rather than passed off as an exact one.
-- The ability to run RefactoringMiner per commit and filter out unwanted commits (such as
-  merge commits).
+- **Per-commit refactoring detection.** `tools.run_refactoring_miner_list` runs
+  RefactoringMiner's `-c` command over a list of commits, skipping merges: a
+  merge's diff attributes every reconciled change to the merge itself, which
+  would credit a landing site with refactorings no one performed. The `-bc` range
+  form cannot express that exclusion. Not yet wired into `RefactoringAnalyzer`.
+- `repos.is_commit_present` and `repos.is_merge_commit`, commit-level predicates
+  over the local clone. The first is load-bearing rather than a convenience:
+  given a commit it cannot find locally, RefactoringMiner's `-c` command
+  downloads a source archive from github.com instead of failing, which would put
+  a network fetch inside `salp run` and report the empty result as evidence.
 
 - **Scala support.** `structural/grammars.py` declares the node vocabulary per
   language — Java and Scala — and every structural analysis is written against
