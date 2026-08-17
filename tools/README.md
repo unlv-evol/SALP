@@ -8,8 +8,7 @@ Point `configs/default.yaml` at whatever you install here:
 
 ```yaml
 tools:
-  refactoringminer_unix: ./tools/refactoringminer/RefactoringMiner[version]/bin/RefactoringMiner
-  refactoringminer_win: ./tools/refactoringminer/RefactoringMiner[version]/bin/RefactoringMiner.bat
+  refactoringminer_jar: ./tools/refactoringminer/RefactoringMiner-<version>/bin/RefactoringMiner
   tree_sitter_lib: ./tools/tree-sitter
 ```
 
@@ -30,7 +29,8 @@ launcher:
 ```
 tools/refactoringminer/
   RefactoringMiner-3.1.4/
-    bin/RefactoringMiner     <- tools.refactoringminer_unix and tools.refactoringminer_win point here
+    bin/RefactoringMiner     <- tools.refactoringminer_jar points here
+    bin/RefactoringMiner.bat <- used automatically on Windows
     lib/*.jar
 ```
 
