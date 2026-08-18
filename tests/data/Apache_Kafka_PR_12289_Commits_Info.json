@@ -1,0 +1,1150 @@
+[
+    {
+        "sha": "7b64bcf458bac2791cd3e62e7959bd15392b0e29",
+        "node_id": "C_kwDOFKnIedoAKDdiNjRiY2Y0NThiYWMyNzkxY2QzZTYyZTc5NTliZDE1MzkyYjBlMjk",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-06-13T17:51:53Z"
+            },
+            "committer": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-06-14T15:38:23Z"
+            },
+            "message": "KAFKA-13957: Fix flaky shouldQuerySpecificActivePartitionStores test\n\nPreviously the tests would fail even on retryable errors. This change adds a retryUntil similar to the current until method however it will retry the test if it throws an exception that passes a predicate. The exception predicate has also been updated to handle another case that can occur due to a stream not being initialized.",
+            "tree": {
+                "sha": "3807a2f5ff32746a52739130d2abe351f0db48e1",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/3807a2f5ff32746a52739130d2abe351f0db48e1"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/7b64bcf458bac2791cd3e62e7959bd15392b0e29",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCgAdFiEELXO2e1Xjhnxfyr9lGWy8j+qkzGQFAmKoq3AACgkQGWy8j+qk\nzGTjJA/+PqBhNioat8vSHCi/4tRSr9qjyvFqBThWYRdWk7ZRc/pkCFiTYiQ8BQFP\nWD/LY6QLxMiASNsHGvCJVGngfRfpS6qidKA3pnGQY7f4a8MIhW2tfM1iH2RCqrPb\nJIWVCs09c8snF37N86OMmppLdKYhnw0xTLdKIvIkwfCgwdpL+KaDEyIEEdUcLo9h\n8pJv7Mm0/MV70AlKIixWbaagKyRD/Q4Kxw0Bk6YSUr7QftJuhS4+Tz5STQTuRUVX\n1SKhLMSDcHsAY8vaX6oyj5r/6lvEXT2A/KI67pe+rJ/TIfSEznVOKHKrm6iA751X\nakgdUvfcafQa0eLfQgaXRipmhbP0UAjm+DJP0gOrd7xFOmxhcrKQ8YIGitG6de7O\nPpmSGyNn2u0hIx9wgw/m3xtRWgYm1xpk/iWF2p3tsny/e2+oy4EJpbaurQDO9lsI\nOlnooDKrd01cElwfr6wt1JSxkkuYDuqXhZ3c2s6ptPkFshX8nDHBg+LU9CTbiGbf\n2lS52MrNdAM+BCFFaeVeJCvABL5hBTmap6ley0z3B111vptCa36fDTPcPaDZWKBZ\nMbSZFREOYGQHWosBrOjd1lq/ryTC4fDLSxEvlKC8+xblrFwzWflmo3WAnyOi4MXH\n2bzT6YuIAiSEgu1NRh5/qeqt6jVJbmetUJiQr/+O2MlC2MOgQGs=\n=Td5B\n-----END PGP SIGNATURE-----",
+                "payload": "tree 3807a2f5ff32746a52739130d2abe351f0db48e1\nparent 7692643f593ec6574f6b5c49302d11c8d4315335\nauthor Matthew de Detrich <matthew.dedetrich@aiven.io> 1655142713 +0200\ncommitter Matthew de Detrich <matthew.dedetrich@aiven.io> 1655221103 +0200\n\nKAFKA-13957: Fix flaky shouldQuerySpecificActivePartitionStores test\n\nPreviously the tests would fail even on retryable errors. This change adds a retryUntil similar to the current until method however it will retry the test if it throws an exception that passes a predicate. The exception predicate has also been updated to handle another case that can occur due to a stream not being initialized.\n",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/7b64bcf458bac2791cd3e62e7959bd15392b0e29",
+        "html_url": "https://github.com/apache/kafka/commit/7b64bcf458bac2791cd3e62e7959bd15392b0e29",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/7b64bcf458bac2791cd3e62e7959bd15392b0e29/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "7692643f593ec6574f6b5c49302d11c8d4315335",
+                "url": "https://api.github.com/repos/apache/kafka/commits/7692643f593ec6574f6b5c49302d11c8d4315335",
+                "html_url": "https://github.com/apache/kafka/commit/7692643f593ec6574f6b5c49302d11c8d4315335"
+            }
+        ]
+    },
+    {
+        "sha": "a3f1d0bbc25fbac5432d60ff194c94d7d9c91617",
+        "node_id": "C_kwDOFKnIedoAKGEzZjFkMGJiYzI1ZmJhYzU0MzJkNjBmZjE5NGM5NGQ3ZDljOTE2MTc",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-06-26T13:00:08Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-06-26T13:00:08Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "7587f0720411dd7d1064d9e3a2f8520beabf9c88",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/7587f0720411dd7d1064d9e3a2f8520beabf9c88"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/a3f1d0bbc25fbac5432d60ff194c94d7d9c91617",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiuFhYCRBK7hj4Ov3rIwAAtY8IAJnOewaE4menmtqhXc5Y7OdN\nSihyOuAofveoCU/ZfxH9QlIC9GSwQRXUOPTTIaCOU3tV9lHyfRMmn0D6vc/ta9/r\nqfEmt7yfLj+aEE2lpmWfGpYrN6FfIxIzYpfeWtGjy21Qeb3wgFE6aBdE8eQu7PrP\nSrHC6rVEhsUnulApXroBbCGHxkg6bRe34OAHq4orlnxxfYfkFZx3kLgU9PHeiv5D\n0rWgATmt8ZNE7q7y6AhLCK+fqs9Wl9WHdEVdQwY6/uoZ/kKYjkMUpSAv8GUJ5Qd5\nId+od71297qwrEmDrJNcM+ellk5wjSxLGxig7tZPDTWrBTXmDXb/CtBsJ5WnFf4=\n=op/f\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 7587f0720411dd7d1064d9e3a2f8520beabf9c88\nparent 7b64bcf458bac2791cd3e62e7959bd15392b0e29\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656248408 +0200\ncommitter GitHub <noreply@github.com> 1656248408 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-01-16T19:59:59Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/a3f1d0bbc25fbac5432d60ff194c94d7d9c91617",
+        "html_url": "https://github.com/apache/kafka/commit/a3f1d0bbc25fbac5432d60ff194c94d7d9c91617",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/a3f1d0bbc25fbac5432d60ff194c94d7d9c91617/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "7b64bcf458bac2791cd3e62e7959bd15392b0e29",
+                "url": "https://api.github.com/repos/apache/kafka/commits/7b64bcf458bac2791cd3e62e7959bd15392b0e29",
+                "html_url": "https://github.com/apache/kafka/commit/7b64bcf458bac2791cd3e62e7959bd15392b0e29"
+            }
+        ]
+    },
+    {
+        "sha": "f5d4fb2ebbf912385470e44001e9877306e1e7d0",
+        "node_id": "C_kwDOFKnIedoAKGY1ZDRmYjJlYmJmOTEyMzg1NDcwZTQ0MDAxZTk4NzczMDZlMWU3ZDA",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-06-26T13:00:24Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-06-26T13:00:24Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "04e71b10879262726c2445abf036853b52da8d14",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/04e71b10879262726c2445abf036853b52da8d14"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/f5d4fb2ebbf912385470e44001e9877306e1e7d0",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiuFhoCRBK7hj4Ov3rIwAA7UgIAIJBEtwosv8OZlAn3YgK/pMh\n2kGASu9JNAG3biR6vz9qvVprIwAdxt2YA8+9CtSY0s5HZodB3zJWODV8eyj1qZWP\nTnBezAbSEdCjx29Ifxwr1Kb15rS54X2Tq0Q9XA+r6yFPI5bY3pvJauRgTBYBSFyT\nto7eQ7AWqrghemoNbc8kGJpyn2YNSE+5OJw3pA3qfVkgtfg+1ZCFby8p1xpWWxY0\nTdDExuvMLycdfeXiLDwbyPsN7bmy/2AlSho+29ctk+UrOkCcF/N3xR2UK/SSAx6e\nVmFWDNVKosnYjR/xDCG7xijpBVRwj2t8RiKIo+n0xBrI7+vUtWjJRccMYgriFE8=\n=qlcy\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 04e71b10879262726c2445abf036853b52da8d14\nparent a3f1d0bbc25fbac5432d60ff194c94d7d9c91617\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656248424 +0200\ncommitter GitHub <noreply@github.com> 1656248424 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/f5d4fb2ebbf912385470e44001e9877306e1e7d0",
+        "html_url": "https://github.com/apache/kafka/commit/f5d4fb2ebbf912385470e44001e9877306e1e7d0",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/f5d4fb2ebbf912385470e44001e9877306e1e7d0/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "a3f1d0bbc25fbac5432d60ff194c94d7d9c91617",
+                "url": "https://api.github.com/repos/apache/kafka/commits/a3f1d0bbc25fbac5432d60ff194c94d7d9c91617",
+                "html_url": "https://github.com/apache/kafka/commit/a3f1d0bbc25fbac5432d60ff194c94d7d9c91617"
+            }
+        ]
+    },
+    {
+        "sha": "e9f37e416866090f245a6f78aea273c8e24aead2",
+        "node_id": "C_kwDOFKnIedoAKGU5ZjM3ZTQxNjg2NjA5MGYyNDVhNmY3OGFlYTI3M2M4ZTI0YWVhZDI",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-06-26T13:00:39Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-06-26T13:00:39Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "6e5d116a2b51f5b8f9f0d51c117abc48bafde273",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/6e5d116a2b51f5b8f9f0d51c117abc48bafde273"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/e9f37e416866090f245a6f78aea273c8e24aead2",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiuFh3CRBK7hj4Ov3rIwAAbicIAJs8a5+3xTzzyQxnNHRm894c\n8zHb1nZFIceHNKRXsZgdJHBRYnKkch0z8J44qvXnWRhngMuwzlmmMK0H5qY80JTm\n8k0p3ZcGkgHC1cjxcoAuz1FhwF3uJmYA6ObCCLwguU3ljxhI9uuB4o6j/AKxilKQ\nfNxLLnWSfUFZZfUOC8waFgawwelrYxNRLBCcjhmkI/rcN0Oxik34sy58cbmhW1GB\nF9yMods0WvW6SSieeMzqXdsgBX7v8TWTU8bOME1BkkMKiCvXjytgRPSxBJrfz8FX\ninIMfbr5JNGzZruMdW3v0FnVIk0d4qxRY8w0bDexYydu+ZjAtGAjWsZs3XrrJso=\n=h60D\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 6e5d116a2b51f5b8f9f0d51c117abc48bafde273\nparent f5d4fb2ebbf912385470e44001e9877306e1e7d0\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656248439 +0200\ncommitter GitHub <noreply@github.com> 1656248439 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/e9f37e416866090f245a6f78aea273c8e24aead2",
+        "html_url": "https://github.com/apache/kafka/commit/e9f37e416866090f245a6f78aea273c8e24aead2",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/e9f37e416866090f245a6f78aea273c8e24aead2/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "f5d4fb2ebbf912385470e44001e9877306e1e7d0",
+                "url": "https://api.github.com/repos/apache/kafka/commits/f5d4fb2ebbf912385470e44001e9877306e1e7d0",
+                "html_url": "https://github.com/apache/kafka/commit/f5d4fb2ebbf912385470e44001e9877306e1e7d0"
+            }
+        ]
+    },
+    {
+        "sha": "a948ee54ebe184ba5dfea38fd91482326059d256",
+        "node_id": "C_kwDOFKnIedoAKGE5NDhlZTU0ZWJlMTg0YmE1ZGZlYTM4ZmQ5MTQ4MjMyNjA1OWQyNTY",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-06-26T15:49:06Z"
+            },
+            "committer": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-06-26T15:49:06Z"
+            },
+            "message": "Rename methods to retriable",
+            "tree": {
+                "sha": "69c719099631bc738c33909c92279b3ce1d904b5",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/69c719099631bc738c33909c92279b3ce1d904b5"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/a948ee54ebe184ba5dfea38fd91482326059d256",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCgAdFiEELXO2e1Xjhnxfyr9lGWy8j+qkzGQFAmK4f/IACgkQGWy8j+qk\nzGQewA//d9M10Psvm8TN6rcCvdgB7zDzoXHttpo77sAj7HQhjoGOT+kyQVP/tVu4\nCvFM5K8XWWN6cglqv9ZmZP6PtHtdCZGshQZAFJBU9lpC6XyuS8/zyknX7wqXgVJe\nRInj0s+sT1pJYKdn7Fjkcq3S1n5mImoTWw5+Gw5PELAvI9ssxOCzNJXJuFAzVBzZ\nigAEBkKAEfyPHZDi7NdG/PEIOKFhgxiiKD2hrh6im2nHq/C39f6RMVm0g3h0p0vr\nUXrNQqczZeXpJiDYdMESizv/wKAA99+GmxEej/vAPUhHeN3OUvAXyhLkcQ3Cl2bK\nhOJLJFuKyvgsnXf9PTJCuB4Rf/YemLGntmcvJRATOw6LLMqlFmhPP5otSnDIRyi6\nveqR6AoERk5HXAyGer/PSpFyu/NoKhzGOV+eZIHP+fr68kRoPzRmnuKsmJd6m0zP\nlrOPjsiySL6YhJepj4oJjOZanED5mTyP4QMv/0289Y8E5YI8dSNvU9NDED6gTnGM\nENgrDR9tS1+L/curfeXzLvR99eiO81dVxcw4bekV2SnnmYKYynhe9rJJAcpq0hMh\nc/06RJNHR8jn+ZpQ2wqEarCS1UBlXSz206gpu4lzwwEusWju5wgu66lcc72yRF4O\nvmrpzATTVuVZ23Ye1GXBSGzHk/uj+r9QfAoqO5LPHegOxKAUOZk=\n=Hh9Y\n-----END PGP SIGNATURE-----",
+                "payload": "tree 69c719099631bc738c33909c92279b3ce1d904b5\nparent e9f37e416866090f245a6f78aea273c8e24aead2\nauthor Matthew de Detrich <matthew.dedetrich@aiven.io> 1656258546 +0200\ncommitter Matthew de Detrich <matthew.dedetrich@aiven.io> 1656258546 +0200\n\nRename methods to retriable\n",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/a948ee54ebe184ba5dfea38fd91482326059d256",
+        "html_url": "https://github.com/apache/kafka/commit/a948ee54ebe184ba5dfea38fd91482326059d256",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/a948ee54ebe184ba5dfea38fd91482326059d256/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "e9f37e416866090f245a6f78aea273c8e24aead2",
+                "url": "https://api.github.com/repos/apache/kafka/commits/e9f37e416866090f245a6f78aea273c8e24aead2",
+                "html_url": "https://github.com/apache/kafka/commit/e9f37e416866090f245a6f78aea273c8e24aead2"
+            }
+        ]
+    },
+    {
+        "sha": "2c9924190196aae33286c93b97d358148e52df76",
+        "node_id": "C_kwDOFKnIedoAKDJjOTkyNDE5MDE5NmFhZTMzMjg2YzkzYjk3ZDM1ODE0OGU1MmRmNzY",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T06:59:16Z"
+            },
+            "committer": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T06:59:16Z"
+            },
+            "message": "Revert to using until",
+            "tree": {
+                "sha": "c2c4c984eba5d0d02bcd0a37bdc002a38162b0d4",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/c2c4c984eba5d0d02bcd0a37bdc002a38162b0d4"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/2c9924190196aae33286c93b97d358148e52df76",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCgAdFiEELXO2e1Xjhnxfyr9lGWy8j+qkzGQFAmLCj8QACgkQGWy8j+qk\nzGQhFxAAgS1hUBi4bzlZCV5FoBEw2hvU0Ylj6vL92RPZ5PQKG0qpfKqETSwiQmx0\nceNuv6srVoFBGzFmf/BNJCQST9gXeDPCHqHLeTcdUFF9m//gL05xp6w0rMmKJ4GB\nmp8ElTFEHOS0g8ShgRgS8K/QEhZo81/m3DLnJtkdUhIsvwGFARghjR1dojclTmHT\nKkw2y5m9KmpmjGqwZtk+y+bNAGEBO8t1+yPJvu/9hSzYylI6Xup+/j4A7y1TghaR\nuiOtUt3JWZEDZqJqvzL9bavZs5FRBXF8dE4R3Rg591AGnqY3oShu6wq4hm3Izzlu\npld0lyHqndhQ8BNn8KVna6YepdnEIPPTKPO+sWiC/VYscJlKhzW364WB9NGnPu/X\nqLKX2qWdwNJYPh9O2IuaG3XnvADWROcO3TXc0AFzIKUv6zkql3Z3OPDeATJvVTp5\nPs29UtXkwJoIRjaP4Yd63Y18SwebISQj1s3o1QO5QlYZdZ1Xuht2mRerPU7IA8o0\n60os00LK1pECrw+i+dguH5pDUtIDC9SW5NqH0k57zR5ZB7g4usuj0EQqo8KSkoiA\nYX9jcEHRjQXqLsQhEi2aebMjXMnoBAIWm9or/kH7+q0wTiwL6z/ilRPnIukNd2AM\nIGPvoVBGWh6jlnA32SAcnfK91QfPaklcboh0uWlI0M8/iEYTNGY=\n=NM3k\n-----END PGP SIGNATURE-----",
+                "payload": "tree c2c4c984eba5d0d02bcd0a37bdc002a38162b0d4\nparent a948ee54ebe184ba5dfea38fd91482326059d256\nauthor Matthew de Detrich <matthew.dedetrich@aiven.io> 1656917956 +0200\ncommitter Matthew de Detrich <matthew.dedetrich@aiven.io> 1656917956 +0200\n\nRevert to using until\n",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/2c9924190196aae33286c93b97d358148e52df76",
+        "html_url": "https://github.com/apache/kafka/commit/2c9924190196aae33286c93b97d358148e52df76",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/2c9924190196aae33286c93b97d358148e52df76/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "a948ee54ebe184ba5dfea38fd91482326059d256",
+                "url": "https://api.github.com/repos/apache/kafka/commits/a948ee54ebe184ba5dfea38fd91482326059d256",
+                "html_url": "https://github.com/apache/kafka/commit/a948ee54ebe184ba5dfea38fd91482326059d256"
+            }
+        ]
+    },
+    {
+        "sha": "80b0a6d9df2deb395ec51c28b6ff3148acabef27",
+        "node_id": "C_kwDOFKnIedoAKDgwYjBhNmQ5ZGYyZGViMzk1ZWM1MWMyOGI2ZmYzMTQ4YWNhYmVmMjc",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-07-04T10:40:05Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-07-04T10:40:05Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "3d8547f1ad6383c6046b03a12a0329ef184d14d0",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/3d8547f1ad6383c6046b03a12a0329ef184d14d0"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/80b0a6d9df2deb395ec51c28b6ff3148acabef27",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiwsOFCRBK7hj4Ov3rIwAABuUIAICNGYwul+rcW2IU/s8DFtNW\nFOwHX1q2cjrIw5irgRiCh+YSSosjwACwCChhOxQNV8LsZsdng0kk7ZvVqpeLLYLu\n9F27giWJjzuHm6U0zgcFgFR+V20uf1cD+vXj+BtukWw4uQ0ps8TeYgYVjJBBJFxz\nmDT4vCji7WL/SWXtSveiynwNlI+qx/Kv9KkSx2svifUGUGXNBF9jCeI8BPIm9BzY\nceNKDP001qt03hB2M2iMNcNO8bIyaHXan7nJZoa+DFYxMbRQPSefl2LtakwFYBCR\nFsGDuQSpkEggA5TGX86Not8ydG+xd784PRFdqSpaUWd1O/Z1OFOf8QjrxvI0sCc=\n=4zjd\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 3d8547f1ad6383c6046b03a12a0329ef184d14d0\nparent 2c9924190196aae33286c93b97d358148e52df76\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656931205 +0200\ncommitter GitHub <noreply@github.com> 1656931205 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-01-16T19:59:59Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/80b0a6d9df2deb395ec51c28b6ff3148acabef27",
+        "html_url": "https://github.com/apache/kafka/commit/80b0a6d9df2deb395ec51c28b6ff3148acabef27",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/80b0a6d9df2deb395ec51c28b6ff3148acabef27/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "2c9924190196aae33286c93b97d358148e52df76",
+                "url": "https://api.github.com/repos/apache/kafka/commits/2c9924190196aae33286c93b97d358148e52df76",
+                "html_url": "https://github.com/apache/kafka/commit/2c9924190196aae33286c93b97d358148e52df76"
+            }
+        ]
+    },
+    {
+        "sha": "8a0db26e48bc30c3ff774d57cba2d0fadd846a0a",
+        "node_id": "C_kwDOFKnIedoAKDhhMGRiMjZlNDhiYzMwYzNmZjc3NGQ1N2NiYTJkMGZhZGQ4NDZhMGE",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-07-04T10:40:13Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-07-04T10:40:13Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "26b37343a0ca58bc923b85e431e0737d0b17adad",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/26b37343a0ca58bc923b85e431e0737d0b17adad"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/8a0db26e48bc30c3ff774d57cba2d0fadd846a0a",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiwsOOCRBK7hj4Ov3rIwAAJP4IACQppvKMk6d6lh85IQN5EXTI\nCws/DZxDU3b6Y3TokZT4aO6m8AfWNjIF9d/MjT5iixGGP+0ZFUqlYMKgTahTPKJH\n+sBvypZThUWmGvTx7IbBl4jStCxlIjy4jOcvipm27gsWtaBtu9RFpF/cGUZgQ0Vl\nnOS10SyjhURG3F9/HC2YbgqFO5Vy4IXMZhQv+yn6G6Z5jsdzNbo/4d7Tugn8BN6l\nMMBR5zRuWygPNAgaGKWcm1lIQN9u95XzTmGdgu0X1cBkMv38Rny4Bnei25LRIhZ0\navTGp3pMK7C0iPWEU5LEPXKw/56uTxXJarF4kB+IyJCSW5nJyxEgH/2QswoVsHY=\n=rSDf\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 26b37343a0ca58bc923b85e431e0737d0b17adad\nparent 80b0a6d9df2deb395ec51c28b6ff3148acabef27\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656931213 +0200\ncommitter GitHub <noreply@github.com> 1656931213 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-01-16T19:59:59Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/8a0db26e48bc30c3ff774d57cba2d0fadd846a0a",
+        "html_url": "https://github.com/apache/kafka/commit/8a0db26e48bc30c3ff774d57cba2d0fadd846a0a",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/8a0db26e48bc30c3ff774d57cba2d0fadd846a0a/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "80b0a6d9df2deb395ec51c28b6ff3148acabef27",
+                "url": "https://api.github.com/repos/apache/kafka/commits/80b0a6d9df2deb395ec51c28b6ff3148acabef27",
+                "html_url": "https://github.com/apache/kafka/commit/80b0a6d9df2deb395ec51c28b6ff3148acabef27"
+            }
+        ]
+    },
+    {
+        "sha": "aef14cec1934a7946507632dc936e2fc79c34ab9",
+        "node_id": "C_kwDOFKnIedoAKGFlZjE0Y2VjMTkzNGE3OTQ2NTA3NjMyZGM5MzZlMmZjNzljMzRhYjk",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-07-04T10:40:21Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-07-04T10:40:21Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "6a193fc8efba6e2f2ffdcde7095284551a84501d",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/6a193fc8efba6e2f2ffdcde7095284551a84501d"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/aef14cec1934a7946507632dc936e2fc79c34ab9",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiwsOVCRBK7hj4Ov3rIwAAf7MIAA9oRjLZgHBF7vOHAFizji3X\n0gy7ZxkGcLSruPGhJgDMxYPBzcgZH0WibdR0tpHI6HFj9ykZ61/nyMBh7NzMq+Kx\nqexdPZTxio1gBCY+VDyfPO4ogt62+FTcf6h+mui5kXiuMN92sxd0GEgXWns2ZGbd\n++metXeSqIJUm0VEXVAw62C9vQrr7U/rbg6p60hcSH4J7+V24JZaE56vS1DBLywf\nDhwLdZmYXtxxEN26yrZ2C/lUTlgfQwywy9qC++lZ40cGh/gizxy7eFkh1ttkv/kX\nFOoKNypNqk29ssy+vHAWIJVecUTQKKpfKXoZMCVrBPq2vAuFrnC/Ob+oDz4uJik=\n=WLjv\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 6a193fc8efba6e2f2ffdcde7095284551a84501d\nparent 8a0db26e48bc30c3ff774d57cba2d0fadd846a0a\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656931221 +0200\ncommitter GitHub <noreply@github.com> 1656931221 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-01-16T19:59:59Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/aef14cec1934a7946507632dc936e2fc79c34ab9",
+        "html_url": "https://github.com/apache/kafka/commit/aef14cec1934a7946507632dc936e2fc79c34ab9",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/aef14cec1934a7946507632dc936e2fc79c34ab9/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "8a0db26e48bc30c3ff774d57cba2d0fadd846a0a",
+                "url": "https://api.github.com/repos/apache/kafka/commits/8a0db26e48bc30c3ff774d57cba2d0fadd846a0a",
+                "html_url": "https://github.com/apache/kafka/commit/8a0db26e48bc30c3ff774d57cba2d0fadd846a0a"
+            }
+        ]
+    },
+    {
+        "sha": "f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285",
+        "node_id": "C_kwDOFKnIedoAKGY0Zjc4MDBiN2RlOGJjMTAxYzg1ZmQ0ZGQ0YmRhNTJhNmIzZDYyODU",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-07-04T10:40:30Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-07-04T10:40:30Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "9de572ba4f18aa6848d226e1b00bc279d4547f57",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/9de572ba4f18aa6848d226e1b00bc279d4547f57"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiwsOeCRBK7hj4Ov3rIwAAXBwIAB8nqkhIA38dUy1PCCukrTC3\nLzZiEW4nH3K1JNcOC7YduKmYBYyTAAag13DTsgvO6X9taatqDBL+YBMJHn9Gci03\nj/wk2AGbHCmBGuJYejM6RRL7Bkd5tg+0c1b0qgVQZujvDUR685dr2x/M9+IpP4iI\nDiylzy/GscNt5dr24tAr50kjPRxWQZShQVipvyi0f5LtITo95srGROKupzbSgrkP\nZetvJtoHQDOKpGhc1oQEQAhNeb/Ueq+e9n3Ge437Bk4ffftxELAaDaLfTHhr/KgP\ndsFAJ8bodBkDKdY/GfwO/GZQ9CyOy5sQYYc1LOGrulF8hZcj8EjO62WvdPNCm18=\n=hMSb\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 9de572ba4f18aa6848d226e1b00bc279d4547f57\nparent aef14cec1934a7946507632dc936e2fc79c34ab9\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656931230 +0200\ncommitter GitHub <noreply@github.com> 1656931230 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285",
+        "html_url": "https://github.com/apache/kafka/commit/f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "aef14cec1934a7946507632dc936e2fc79c34ab9",
+                "url": "https://api.github.com/repos/apache/kafka/commits/aef14cec1934a7946507632dc936e2fc79c34ab9",
+                "html_url": "https://github.com/apache/kafka/commit/aef14cec1934a7946507632dc936e2fc79c34ab9"
+            }
+        ]
+    },
+    {
+        "sha": "1e3d1fca8864b66e21319930f471bb1fe3015ca4",
+        "node_id": "C_kwDOFKnIedoAKDFlM2QxZmNhODg2NGI2NmUyMTMxOTkzMGY0NzFiYjFmZTMwMTVjYTQ",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "mdedetrich@gmail.com",
+                "date": "2022-07-04T10:40:39Z"
+            },
+            "committer": {
+                "name": "GitHub",
+                "email": "noreply@github.com",
+                "date": "2022-07-04T10:40:39Z"
+            },
+            "message": "Update streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+            "tree": {
+                "sha": "505695a9383403a37d480d02c3e7a052877c5848",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/505695a9383403a37d480d02c3e7a052877c5848"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/1e3d1fca8864b66e21319930f471bb1fe3015ca4",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJiwsOnCRBK7hj4Ov3rIwAAAfcIAAc/eESy8qmNxmoBxVpAoVE9\nJg59RyXUAQUFlwFgzZWh2YLBjnMOlDU4wqmhp1rk4iA/5seAwP+h9IHQKjbneDlA\niGHljRqB8Ej/YEy4E1hYJrP1boAQjXXpwsEAinEARJefMYGVa3p8e3qhCEGgcU26\n5CUBMJpgEW7k5MWU4sVhgxNug1C9FW1HwHpCyVPgBHHaBWf8/yGpienE+QEP6bnq\n/Rk3y8UobYVUXPDhfHhW51qV3q8s5NoKA/Gt47408YQrQW/wr+ESpvbS28/8AIhQ\noJahunYTDU5dhFzSuz5nNrp4VD0OSJwQsS5aIsaUyMVLsaWHSxO4q6+gm8oo/rc=\n=j209\n-----END PGP SIGNATURE-----\n",
+                "payload": "tree 505695a9383403a37d480d02c3e7a052877c5848\nparent f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285\nauthor Matthew de Detrich <mdedetrich@gmail.com> 1656931239 +0200\ncommitter GitHub <noreply@github.com> 1656931239 +0200\n\nUpdate streams/src/test/java/org/apache/kafka/streams/integration/StoreQueryIntegrationTest.java\n\nCo-authored-by: Bruno Cadonna <cadonna@apache.org>",
+                "verified_at": "2024-01-16T19:59:59Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/1e3d1fca8864b66e21319930f471bb1fe3015ca4",
+        "html_url": "https://github.com/apache/kafka/commit/1e3d1fca8864b66e21319930f471bb1fe3015ca4",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/1e3d1fca8864b66e21319930f471bb1fe3015ca4/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "web-flow",
+            "id": 19864447,
+            "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+            "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/web-flow",
+            "html_url": "https://github.com/web-flow",
+            "followers_url": "https://api.github.com/users/web-flow/followers",
+            "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+            "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+            "organizations_url": "https://api.github.com/users/web-flow/orgs",
+            "repos_url": "https://api.github.com/users/web-flow/repos",
+            "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/web-flow/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285",
+                "url": "https://api.github.com/repos/apache/kafka/commits/f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285",
+                "html_url": "https://github.com/apache/kafka/commit/f4f7800b7de8bc101c85fd4dd4bda52a6b3d6285"
+            }
+        ]
+    },
+    {
+        "sha": "78f5e5d2b2e3f7275d60e36bf2979669dc067f1c",
+        "node_id": "C_kwDOFKnIedoAKDc4ZjVlNWQyYjJlM2Y3Mjc1ZDYwZTM2YmYyOTc5NjY5ZGMwNjdmMWM",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T06:59:16Z"
+            },
+            "committer": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T11:01:06Z"
+            },
+            "message": "Revert to using until",
+            "tree": {
+                "sha": "55750f1c1edcbfa49737b3e7afe36cc9b6674703",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/55750f1c1edcbfa49737b3e7afe36cc9b6674703"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/78f5e5d2b2e3f7275d60e36bf2979669dc067f1c",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCgAdFiEELXO2e1Xjhnxfyr9lGWy8j+qkzGQFAmLCyHMACgkQGWy8j+qk\nzGTddw/8Drnnr69MWtHfyLPxBoki8KXmb1w5qBXlH8gyedgOZa9P8fNfI8WyvDju\nexx97PYbLTCdO8bBd+EMY9q416FeR8tFJ8n0NopSaBYRuZ4wIP0+AxAFpWSbefpf\nK4uuHuAqK72FkrM35lgyjXThxJYMSwcp3f6OgNZeJBJkHnbtnr6TzVB/3VyBxkVy\nSlI7BpTV0FhKCRwF0JbSbW2bq5twdlBlPfoSZZB1tZvKu6RxC8sEd4bY2wilJCSv\nx5GNfIDDAfV+svVEiuadJIsTPs3WrzvyYL6dkNjfUWWNlWA5oC+5fmdjGXbfOUCn\nMl6GaaNFB1CJDojDlyT9wtszBtdIi/jSrEeYlYKYrhvAzwIVfo+nDz3NcrFiS6OL\nR7yS5ZHn/alVHjJpc4gFeYwyCVX2wohzBXZ0Ev8y/p6kqIytp3GiHgmt+UUXH/hr\n5qyfx9tLBVdd5Vl1QKSFwOTrlc21Iw6Fk6vmIEuyVHZNc6Gat/SxuhbnMKBVCbGQ\nQjOrPWXGrLiSF7SGbRsjXGJNRmJY23Ss/fZ/exN7kAyoce72NAmXccLY/VJiMFps\ntuNGduoFK53zEDmmCm67/KVuvDZq3LzWakvjJvLHiYYnkOgiv8q3HOkTugEWE+vT\nN0e7XoDOyEJNK+VOR2mTQt+JuZ16Mngf5cZcgFQrviirZld8XFs=\n=gOAc\n-----END PGP SIGNATURE-----",
+                "payload": "tree 55750f1c1edcbfa49737b3e7afe36cc9b6674703\nparent 1e3d1fca8864b66e21319930f471bb1fe3015ca4\nauthor Matthew de Detrich <matthew.dedetrich@aiven.io> 1656917956 +0200\ncommitter Matthew de Detrich <matthew.dedetrich@aiven.io> 1656932466 +0200\n\nRevert to using until\n",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/78f5e5d2b2e3f7275d60e36bf2979669dc067f1c",
+        "html_url": "https://github.com/apache/kafka/commit/78f5e5d2b2e3f7275d60e36bf2979669dc067f1c",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/78f5e5d2b2e3f7275d60e36bf2979669dc067f1c/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "1e3d1fca8864b66e21319930f471bb1fe3015ca4",
+                "url": "https://api.github.com/repos/apache/kafka/commits/1e3d1fca8864b66e21319930f471bb1fe3015ca4",
+                "html_url": "https://github.com/apache/kafka/commit/1e3d1fca8864b66e21319930f471bb1fe3015ca4"
+            }
+        ]
+    },
+    {
+        "sha": "aa0a3a0a084e8517cce61ede880b37f677ca88ef",
+        "node_id": "C_kwDOFKnIedoAKGFhMGEzYTBhMDg0ZTg1MTdjY2U2MWVkZTg4MGIzN2Y2NzdjYTg4ZWY",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T10:39:28Z"
+            },
+            "committer": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T11:01:13Z"
+            },
+            "message": "Fix until",
+            "tree": {
+                "sha": "4d9d1ac2369c41338b0dd7c6827ea244875392a2",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/4d9d1ac2369c41338b0dd7c6827ea244875392a2"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/aa0a3a0a084e8517cce61ede880b37f677ca88ef",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCgAdFiEELXO2e1Xjhnxfyr9lGWy8j+qkzGQFAmLCyHkACgkQGWy8j+qk\nzGSS/BAAqI5Tz3xGuzXrbE9JtWtnYPFRgBztcMlWLiCfLwURTYEBnqmS/SdJ0Typ\nTCH2AwYs4x6lnvSKyw2LBJBdNHF64ITT6PPboETEav1ijf+rdK9bZzWGI3A+0PvB\n9AlM4XhcsKOh4QmmPRpifWbkz4GFkJiKjmcGEiIZNM9jTgZTsPdRci8yMXIfEGFs\nv0mabv/Lfq44T+70H3LBd6VetFapeSqowt0VzH8YrlNAwnFIrLylWxYNTVHzeaMq\n7lpdyyT/LiJ0vCFBQJoNZxicZ6JcZW2pVyG7BYDgWlG1mvRZhnOL5cRj6Ro7gfhS\nYZQZcRA7vtXaE5hOIZCiTlE+0ASssef8q7Omdk6IxdMO+ATYmxTiL5tEnjJRCD6k\nUS43+S7C5PgfFyAhfoP3AmUpHcI074C+OE2omybPbtKqgOrjR7EQ7yifOAE4HRwT\nGXDrDVxvJA5So7Nv9tATfv8DcSogN7/9dUK3pqHTlKT2/mfApMyE/Ta4BTSaDHIr\nOe5SwXWqL+NKnAjSem1Pp+xtgDRXUnIG4nVu5NcdMlkG3xrZvvudhsRjoZB5fK/M\nXP/P2+uEuAz2iwmjayr1LhnPWKhGQpzzROeikLH6raocJEO8IVyKJdUKeVwhtSea\ntd7XlhLFKPhf1dd7l+3apb2Eti2oBMCaaEsqmW/4F4kSOR2RrZc=\n=TMWm\n-----END PGP SIGNATURE-----",
+                "payload": "tree 4d9d1ac2369c41338b0dd7c6827ea244875392a2\nparent 78f5e5d2b2e3f7275d60e36bf2979669dc067f1c\nauthor Matthew de Detrich <matthew.dedetrich@aiven.io> 1656931168 +0200\ncommitter Matthew de Detrich <matthew.dedetrich@aiven.io> 1656932473 +0200\n\nFix until\n",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/aa0a3a0a084e8517cce61ede880b37f677ca88ef",
+        "html_url": "https://github.com/apache/kafka/commit/aa0a3a0a084e8517cce61ede880b37f677ca88ef",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/aa0a3a0a084e8517cce61ede880b37f677ca88ef/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "78f5e5d2b2e3f7275d60e36bf2979669dc067f1c",
+                "url": "https://api.github.com/repos/apache/kafka/commits/78f5e5d2b2e3f7275d60e36bf2979669dc067f1c",
+                "html_url": "https://github.com/apache/kafka/commit/78f5e5d2b2e3f7275d60e36bf2979669dc067f1c"
+            }
+        ]
+    },
+    {
+        "sha": "aef1e021805d93b25688c62c0e14dfe8a9bebd1e",
+        "node_id": "C_kwDOFKnIedoAKGFlZjFlMDIxODA1ZDkzYjI1Njg4YzYyYzBlMTRkZmU4YTliZWJkMWU",
+        "commit": {
+            "author": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T10:39:45Z"
+            },
+            "committer": {
+                "name": "Matthew de Detrich",
+                "email": "matthew.dedetrich@aiven.io",
+                "date": "2022-07-04T11:01:13Z"
+            },
+            "message": "Remove redundant method",
+            "tree": {
+                "sha": "9f84f907aeb4f0649cd17e5f4bb739ccb2025cdf",
+                "url": "https://api.github.com/repos/apache/kafka/git/trees/9f84f907aeb4f0649cd17e5f4bb739ccb2025cdf"
+            },
+            "url": "https://api.github.com/repos/apache/kafka/git/commits/aef1e021805d93b25688c62c0e14dfe8a9bebd1e",
+            "comment_count": 0,
+            "verification": {
+                "verified": true,
+                "reason": "valid",
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\niQIzBAABCgAdFiEELXO2e1Xjhnxfyr9lGWy8j+qkzGQFAmLCyHkACgkQGWy8j+qk\nzGRGxxAAtjslbNc7bPl683fLrVIosihs6P9bXSmICM7FOchGwISGOtYmFD19T2dm\nqeG5s1AtejdDs/YIbQo8Uss2iYn+JCZ2Snmiy/hxzH8ewy+NCccC251Vwh/fGOds\nR/1GUTOeZwMr5HRzwpPeCOcdgFAq9KL0cE9SMaQGf6TtHL/o0roRNsRYV0mXPSz6\nRGxsKOKh2Z86xaZ6IcIkY36vgappGXc6yYx354gX9twx7kgrw+8SDmAyCZ24cIUw\nyTy0uWeUhymQ9YkQqJUu7pNV+mtPcuSZh9mR8dbfupqIzciYckODQY5CpO9SUHa9\nsaEz5VJAdujbs+VdkSaJbqv3c0oDuR83jk6lxyfC1nKGBt5lxlaAsntAp7OGpRuL\niF9qhc4qFXcSkadc2HuW//7NSUbtn9X/zUrn2bZ1Dn7Bs/3sOBr69ZYFddwX5wdw\ncwrygRAloA5e45NokBgCKQdqBbv3DxS1MNlOI+mPvpl0bLol9/8EvMah66CMfBSV\nnoOGDo8FopjiZ0j2ZCfJ66cPcX5MQtQGiKbXJipX9TjNJYsABAJZ3k69ttXOyoYK\n8fE1bgcO2CQMA3Km9+zYjQHKytPelVCka+knf9SNXhpGrtXuf/a9NMKWMLE2Kpbz\nhpxAcPMkQn6GE9c9DMbFfHqI88wv3qaJ9xaYprjE9prfOamVwFE=\n=ucUR\n-----END PGP SIGNATURE-----",
+                "payload": "tree 9f84f907aeb4f0649cd17e5f4bb739ccb2025cdf\nparent aa0a3a0a084e8517cce61ede880b37f677ca88ef\nauthor Matthew de Detrich <matthew.dedetrich@aiven.io> 1656931185 +0200\ncommitter Matthew de Detrich <matthew.dedetrich@aiven.io> 1656932473 +0200\n\nRemove redundant method\n",
+                "verified_at": "2024-11-08T04:59:20Z"
+            }
+        },
+        "url": "https://api.github.com/repos/apache/kafka/commits/aef1e021805d93b25688c62c0e14dfe8a9bebd1e",
+        "html_url": "https://github.com/apache/kafka/commit/aef1e021805d93b25688c62c0e14dfe8a9bebd1e",
+        "comments_url": "https://api.github.com/repos/apache/kafka/commits/aef1e021805d93b25688c62c0e14dfe8a9bebd1e/comments",
+        "author": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "committer": {
+            "login": "mdedetrich",
+            "id": 2337269,
+            "node_id": "MDQ6VXNlcjIzMzcyNjk=",
+            "avatar_url": "https://avatars.githubusercontent.com/u/2337269?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/mdedetrich",
+            "html_url": "https://github.com/mdedetrich",
+            "followers_url": "https://api.github.com/users/mdedetrich/followers",
+            "following_url": "https://api.github.com/users/mdedetrich/following{/other_user}",
+            "gists_url": "https://api.github.com/users/mdedetrich/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/mdedetrich/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/mdedetrich/subscriptions",
+            "organizations_url": "https://api.github.com/users/mdedetrich/orgs",
+            "repos_url": "https://api.github.com/users/mdedetrich/repos",
+            "events_url": "https://api.github.com/users/mdedetrich/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/mdedetrich/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+        },
+        "parents": [
+            {
+                "sha": "aa0a3a0a084e8517cce61ede880b37f677ca88ef",
+                "url": "https://api.github.com/repos/apache/kafka/commits/aa0a3a0a084e8517cce61ede880b37f677ca88ef",
+                "html_url": "https://github.com/apache/kafka/commit/aa0a3a0a084e8517cce61ede880b37f677ca88ef"
+            }
+        ]
+    }
+]

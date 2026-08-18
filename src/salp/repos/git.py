@@ -64,3 +64,38 @@ def run(
 def run_network(*args: str, cwd: Path | None = None) -> GitResult:
     """Run a git command that talks to a remote."""
     return run(*args, cwd=cwd, timeout=_NETWORK_TIMEOUT)
+
+
+# --- commit-level predicates ---------------------------------------------------
+def is_commit_present(commit_sha: str, repo_dir: Path) -> bool:
+    """Whether a commit object exists in a repository.
+
+    ``^{commit}`` rather than a bare object check: a hexadecimal string can name
+    a blob or a tree, and neither is something a commit-level analysis can use.
+
+    Callers rely on this to keep analysis local. See the note in
+    ``analyzers/tools.py`` on RefactoringMiner's ``-c`` command, which falls back
+    to the network for a commit it cannot find.
+    """
+    if not commit_sha:
+        return False
+    return run("cat-file", "-e", f"{commit_sha}^{{commit}}", cwd=repo_dir).ok
+
+
+def is_merge_commit(commit_sha: str, repo_dir: Path) -> bool:
+    """Whether a commit has more than one parent.
+
+    A merge's diff attributes every reconciled change to the merge itself, so
+    counting it would credit a landing site with refactorings no one performed.
+
+    Returns False when the commit cannot be read at all -- absent, or not a
+    commit. That is deliberately indistinguishable from "not a merge" because
+    the answer is only ever used to *skip* work; use ``is_commit_present`` first
+    where the difference matters.
+    """
+    if not commit_sha:
+        return False
+    result = run("log", "-1", "--format=%P", commit_sha, cwd=repo_dir)
+    if not result.ok:
+        return False
+    return len(result.text.split()) > 1

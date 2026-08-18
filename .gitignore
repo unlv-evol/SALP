@@ -300,3 +300,10 @@ tools/**
 /out/
 data/out/
 .refactoring-cache/
+
+# RefactoringMiner unzips a GitHub source archive into <cwd>/<project>-<sha>/
+# when it is given a commit the local clone does not contain. `salp run` guards
+# against reaching that path at all (see analyzers/tools.py), but a stray manual
+# invocation should not show up as hundreds of megabytes of untracked files.
+/*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+data/*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*

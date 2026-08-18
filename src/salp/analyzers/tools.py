@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from salp.config import get_logger
+from salp.repos import git
 
 log = get_logger(__name__)
 
@@ -129,6 +130,95 @@ def run_refactoring_miner(
         sum(len(c.get("refactorings") or ()) for c in commits),
     )
     return commits
+
+@lru_cache(maxsize=32)
+def run_refactoring_miner_list(
+    jar: Path | None,
+    repo_dir: Path,
+    sha_list: tuple[str, ...] | None = None,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> tuple[dict[str, Any], ...] | str:
+    """Refactorings per commit, via RefactoringMiner's ``-c`` command.
+
+    Merge commits are skipped: a merge's diff attributes every reconciled change
+    to the merge itself, which would credit a landing site with refactorings no
+    one performed. ``-bc`` cannot express that exclusion, which is why the
+    per-commit form exists.
+
+    Returns the commits analysed, or a diagnostic string. An empty ``sha_list``
+    is an empty result rather than an error -- there was nothing to analyse.
+    """
+    if jar is None:
+        return "tools.refactoringminer_jar is not configured"
+    if not Path(jar).exists():
+        return f"RefactoringMiner not found at {jar}"
+    if not os.access(jar, os.X_OK):
+        return f"RefactoringMiner at {jar} is not executable"
+    if not sha_list:
+        return ()
+    if not shutil.which("java"):
+        return "java is not installed or not on PATH"
+
+    repo = Path(repo_dir).resolve()
+    commits = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "refactorings.json"
+
+        for commit_sha in sha_list:
+            out.unlink(missing_ok=True)
+            # NOT a redundant pre-flight check. Given a commit it cannot find
+            # locally, `-c` does not fail: it downloads
+            # https://github.com/<owner>/<repo>/archive/<sha>.zip for the commit
+            # and its parent, unzips them into <cwd>/<project>-<sha>/ (~57MB
+            # each), and exits 0 reporting no refactorings. That would put a
+            # network fetch and hundreds of megabytes inside `salp run`, which is
+            # specified to be local and deterministic, and would report the
+            # empty result as evidence. `-bc` fails loudly instead.
+            if not git.is_commit_present(commit_sha, repo):
+                return (
+                    f"commit {commit_sha} is not present in {repo_dir.name}; "
+                    "run `salp fetch-repos` for the pull request that contains it"
+                )
+            if git.is_merge_commit(commit_sha, repo):
+                continue
+
+            command = [str(jar), "-c", str(repo), commit_sha, "-json", str(out)]
+            try:
+                proc = subprocess.run(  # noqa: S603 - configured path, no shell
+                    command, capture_output=True, text=True, timeout=timeout, check=False
+                )
+            except subprocess.TimeoutExpired:
+                return (
+                    f"RefactoringMiner exceeded {timeout}s on {repo_dir.name}; raise "
+                    "tools.refactoringminer_timeout or disable it with --no-refactorings"
+                )
+            except OSError as exc:
+                return f"could not run RefactoringMiner: {exc}"
+
+            if proc.returncode != 0:
+                if proc.returncode == 255:
+                    log.warning(
+                        "the RefactoringMiner launcher at %s failed with 255, which "
+                        "usually means a line in it exceeds the command-line limit",
+                        jar,
+                    )
+                return f"RefactoringMiner exited {proc.returncode}: {proc.stderr.strip()[:200]}"
+            if not out.is_file():
+                return "RefactoringMiner produced no output file"
+            try:
+                report = json.loads(out.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                return f"could not read the RefactoringMiner report: {exc}"
+            # `-c` still wraps its single commit in the "commits" array that
+            # `-bc` uses for a range, so the one entry is taken from index 0.
+            reported = report.get("commits") or []
+            commits.append(reported[0] if reported else {})
+
+    log.info(
+        "%s: %d commit(s), %d refactoring(s)", repo_dir.name, len(commits),
+        sum(len(c.get("refactorings") or ()) for c in commits),
+    )
+    return tuple(commits)
 
 
 # --- tool versions, for provenance -------------------------------------------
