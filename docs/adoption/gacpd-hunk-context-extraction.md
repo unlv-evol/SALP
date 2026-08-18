@@ -265,7 +265,8 @@ The `-bc` form was chosen: both endpoints are already resolved as repository
 state pins, so it needs no token. RefactoringMiner 3.1.4 ships as a distribution
 (`bin/` launcher plus `lib/`), not a fat jar, so `tools.refactoringminer_jar`
 points at the launcher and the version is read from the distribution directory
-name.
+name. The distribution carries a `.bat` alongside it, which is selected
+automatically on Windows.
 
 One addition of our own: the runner is cached on its arguments. Every pull
 request of a variant pair shares one divergence-to-cutoff range, so an uncached

@@ -100,6 +100,15 @@ All notable changes to this project are documented here, following
 - Refactoring results correlated left and right locations by index
   unconditionally; on a real run half the reports have arrays of different
   lengths, so pairing is now applied only where it holds.
+- RefactoringMiner never ran on Windows: the configured path named the Unix
+  launcher, and the distribution's `.bat` was ignored. The Windows launcher is
+  now derived from the configured path rather than configured separately, so one
+  config file stays correct on every platform that shares it.
+- An unknown key under `tools` was accepted and ignored. A renamed or misspelled
+  setting silently turned a whole evidence category `UNAVAILABLE` — on the
+  reference sample that moved `refactoring` from 125 `VERIFIED_ABSENT` to 125
+  `UNAVAILABLE` and mean Coverage from 0.940 to 0.823, with nothing naming the
+  cause. `tools` now rejects unknown keys.
 
 ### Changed
 

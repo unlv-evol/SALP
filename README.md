@@ -374,7 +374,8 @@ GACPD; structural, surrounding, compatibility, and verification are recovered
 from the whole files and repository trees at their pinned commits; refactoring
 runs RefactoringMiner over the target's divergence-to-cutoff drift when
 `tools.refactoringminer_jar` is configured, and reports an explicit gap when it
-is not.
+is not. The distribution ships a Unix launcher and a `.bat`; the config names the
+first and the second is used automatically on Windows.
 
 On the reference sample — 11 SAPs, 25 hunks, 1,450 required information elements:
 

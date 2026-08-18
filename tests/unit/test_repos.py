@@ -8,6 +8,7 @@ blob without a working tree -- is exercised. No network is involved: the
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -33,10 +34,21 @@ SLUG = "acme/widget"
 
 
 def _git(cwd: Path, *args: str, when: str | None = None) -> None:
+    # Inherit the real environment and override only what must be fixed. A
+    # constructed one with a POSIX PATH hides git from Windows entirely, and
+    # dropping SYSTEMROOT breaks subprocess there for unrelated reasons.
+    #
+    # Isolation from the developer's own git config is kept, but by pointing the
+    # config paths at a file that does not exist -- git reads a missing config as
+    # an empty one -- rather than by discarding the environment. Otherwise a
+    # global `commit.gpgsign` or hook path leaks into the fixture.
+    absent_config = str(cwd / ".config-that-does-not-exist")
     env = {
+        **os.environ,
         "GIT_AUTHOR_NAME": "T", "GIT_AUTHOR_EMAIL": "t@example.com",
         "GIT_COMMITTER_NAME": "T", "GIT_COMMITTER_EMAIL": "t@example.com",
-        "PATH": "/usr/bin:/bin:/usr/local/bin",
+        "GIT_CONFIG_GLOBAL": absent_config,
+        "GIT_CONFIG_SYSTEM": absent_config,
     }
     if when:
         env["GIT_AUTHOR_DATE"] = env["GIT_COMMITTER_DATE"] = when
