@@ -9,6 +9,7 @@ incomplete environment reports honestly rather than passing vacuously.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -50,10 +51,24 @@ def kafka(cfg: Config) -> Path:
 
 @pytest.fixture
 def miner(cfg: Config) -> Path:
-    jar = cfg.tools.refactoringminer_jar
-    if jar is None or not jar.is_file():
+    """The launcher for *this* platform, or a skip naming what is missing.
+
+    Resolved through ``refactoringminer_launcher()`` rather than read from the
+    config directly. The distribution ships both a Unix launcher and a ``.bat``,
+    so reading the configured path would find a file that exists on Windows and
+    then fail to run it -- the exact breakage the launcher resolution exists to
+    prevent.
+
+    A JVM is checked here too. RefactoringMiner installed without Java makes the
+    runner return a diagnostic string, which these tests assert against and would
+    report as a failure rather than as the environment gap it is.
+    """
+    launcher = cfg.tools.refactoringminer_launcher()
+    if launcher is None or not launcher.is_file():
         pytest.skip("no RefactoringMiner distribution; see tools/README.md")
-    return jar
+    if shutil.which("java") is None:
+        pytest.skip("no JVM on PATH; RefactoringMiner cannot run")
+    return launcher
 
 
 @pytest.fixture
