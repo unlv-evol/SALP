@@ -1,0 +1,15 @@
+# Normalise line endings on the way in and check out LF everywhere.
+#
+# The test suite compares recovered program text against fixtures, and the GACPD
+# parsers are line-oriented. Letting Git for Windows convert to CRLF on checkout
+# would make that text differ by platform, so a fixture that matches on Linux
+# would not match on Windows for reasons that have nothing to do with the code.
+* text=auto eol=lf
+
+# Anything read as bytes, or whose exact bytes are the point.
+*.png binary
+*.jpg binary
+*.zip binary
+*.jar binary
+*.patch -text
+*.diff -text
