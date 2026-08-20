@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,20 +24,19 @@ def _line(label: str, value: str = r".*?") -> re.Pattern[str]:
     return re.compile(rf"^{_H}{label}{_H}:{_H}({value}){_H}$", _FLAGS)
 
 
-# --- pr_results.txt ----------------------------------------------------------
-_PR_NUMBER = _line(r"Classified PR", r"\d*")
+# --- pr_results.json ----------------------------------------------------------
+_PR_NUMBER = "classifiedPR"
+
+_PR_TITLE = "prTitle"
 
 
-_PR_TITLE = _line(r"PR Title")
+_PR_LOCATION ="prLocation"
 
 
-_PR_LOCATION = _line(r"PR Location", r"\S*")
+_DIVERGENCE_DATE = "repoDivergenceDate"
 
 
-_DIVERGENCE_DATE = _line(r"REPO DIVERGENCE DATE", r"\S*")
-
-
-_CUTOFF_DATE = _line(r"CUTOFF DATE", r"\S*")
+_CUTOFF_DATE = "cutoffDate"
 
 
 # --- results.txt -------------------------------------------------------------
@@ -126,7 +126,7 @@ class HunkSimilarity:
 
 @dataclass
 class PullRequestMetadata:
-    """Pull-request identity, as reported by ``pr_results.txt``.
+    """Pull-request identity, as reported by ``pr_results.json``.
 
     The repository pair is not in this record; it is recovered per file from
     ``results.txt`` and promoted to the pull request by the caller.
@@ -177,28 +177,38 @@ class PullRequestMetadata:
 def parse_pr_results(
     path: Path | None, *, pr_dir_name: str | None = None
 ) -> PullRequestMetadata:
-    """Parse ``pr_results.txt`` into pull-request metadata."""
-    text = _read(path)
+    """Get the data from ``pr_results.json`` and save into pull-request metadata."""
+    results = {}
     meta = PullRequestMetadata()
 
+    if path is not None:
+        try:
+            raw_data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(raw_data, dict):
+                results = raw_data
+            else:
+                meta.diagnostics.append("pr_results.json is not a valid JSON object")
+        except (FileNotFoundError, OSError, json.JSONDecodeError) as e:
+            meta.diagnostics.append(f"pr_results.json absent or unreadable")
+    else:
+        meta.diagnostics.append("pr_results.json path not provided")
+
     # the record is authoritative; the directory name is the fallback
-    meta.number = _field(_PR_NUMBER, text)
+    meta.number = results.get(_PR_NUMBER)
     if meta.number is None and pr_dir_name and (m := re.search(r"(\d+)", pr_dir_name)):
         meta.number = m.group(1)
-    meta.title = _field(_PR_TITLE, text)
-    meta.url = _field(_PR_LOCATION, text)
+    meta.title = results.get(_PR_TITLE)
+    meta.url = results.get(_PR_LOCATION)
     # dates are timestamps (2022-06-02T00:00:00Z); the calendar day is what the
     # manifest reports, the full timestamp is what resolves a commit
-    meta.divergence_timestamp = _field(_DIVERGENCE_DATE, text)
-    meta.cutoff_timestamp = _field(_CUTOFF_DATE, text)
+    meta.divergence_timestamp = results.get(_DIVERGENCE_DATE)
+    meta.cutoff_timestamp = results.get(_CUTOFF_DATE)
     meta.divergence_date = _calendar_day(meta.divergence_timestamp)
     meta.cutoff_date = _calendar_day(meta.cutoff_timestamp)
 
-    if not text:
-        meta.diagnostics.append("pr_results.txt absent or unreadable")
     for label, value in (("title", meta.title), ("url", meta.url)):
         if value is None:
-            meta.diagnostics.append(f"pr_results.txt records no {label}")
+            meta.diagnostics.append(f"pr_results.json records no {label}")
     if not (meta.divergence_date and meta.cutoff_date):
         meta.diagnostics.append("incomplete divergence/cutoff dates; pin is unbound")
     return meta

@@ -199,13 +199,13 @@ def _context_payload(file_dir: Path, target: Path | None) -> Path | None:
 
 def load_pull_request(pr_dir: Path) -> GACPDPullRequest:
     """Load one ``<PR>_MO`` directory."""
-    results_file = pr_dir / "pr_results.txt"
+    results_file = pr_dir / "pr_results.json"
     pr = GACPDPullRequest(
         pr_id=pr_dir.name,
         pr_dir=pr_dir,
         results_file=results_file if results_file.is_file() else None,
         metadata=parse_pr_results(
-            results_file if results_file.is_file() else None,
+            results_file,
             pr_dir_name=pr_dir.name,
         ),
     )
@@ -226,7 +226,7 @@ def load_pull_request(pr_dir: Path) -> GACPDPullRequest:
 def _promote_repository_pair(pr: GACPDPullRequest) -> None:
     """Lift the repository pair from the per-file records onto the pull request.
 
-    ``pr_results.txt`` never names the divergent repository, and the run
+    ``pr_results.json`` never names the divergent repository, and the run
     directory abbreviates it, so the pair is recovered from the first file whose
     ``results.txt`` reported it. A pull request whose files disagree is recorded
     as a diagnostic rather than silently resolved.
@@ -254,7 +254,7 @@ def discover_pull_requests(run_dir: Path) -> list[GACPDPullRequest]:
     for pr_dir in sorted(run_dir.rglob("*_MO")):
         if not pr_dir.is_dir() or _is_ignored(pr_dir):
             continue
-        if (pr_dir / "pr_results.txt").is_file() or any(
+        if (pr_dir / "pr_results.json").is_file() or any(
             (pr_dir / b).is_dir() for b in ("MO", "NA", "ED")
         ):
             prs.append(load_pull_request(pr_dir))
