@@ -154,8 +154,9 @@ def _load_file(file_dir: Path) -> GACPDFile | None:
 
     patch = None
     src = file_dir / "src"
-    if src.is_dir():
-        patches = sorted(src.glob("*.patch"))
+    patch_dir = file_dir / "patch"
+    if patch_dir.is_dir():
+        patches = sorted(patch_dir.glob("*.patch"))
         patch = patches[0] if patches else None
 
     target = None
