@@ -39,28 +39,28 @@ _DIVERGENCE_DATE = "repoDivergenceDate"
 _CUTOFF_DATE = "cutoffDate"
 
 
-# --- results.txt -------------------------------------------------------------
-_MAINLINE = _line(r"Mainline is", r"\S*")
+# --- results.json -------------------------------------------------------------
+_MAINLINE = "mainline"
 
 
-_DIVERGENT_REPO = _line(r"Divergent Repo is", r"\S*")
+_DIVERGENT_REPO = "divergentRepo"
 
 
-_SOURCE_PATH = _line(r"File")
+_SOURCE_PATH = "fileName"
 
 
-_DIVERGENT_PATH = _line(r"Is called in Divergent Path is")
+_DIVERGENT_PATH = "divergentPath"
 
 
-_CLASSIFICATION = re.compile(
-    r"final classification is\s*:\s*([A-Z]{2})", re.IGNORECASE
-)
+_CLASSIFICATION = "classification"
 
+_SIMILARITYCHECK = "similarityChecks"
+
+_CHECKNAME = "checkName"
 
 # e.g. "src/hunk_1_deletions.java (30) - has a similarity of: 100%"
-_SIMILARITY = re.compile(
-    r"hunk_(\d+)_(additions|deletions)\.\w+\s*\((\d+)\)\s*"
-    r"-\s*has a similarity of\s*:\s*(\d+(?:\.\d+)?)\s*%",
+_HUNK = re.compile(
+    r"^hunk_(?P<number>\d+)_(?P<mode>[a-zA-Z0-9_-]+)\.[a-zA-Z0-9]+$",
     re.IGNORECASE,
 )
 
@@ -129,7 +129,7 @@ class PullRequestMetadata:
     """Pull-request identity, as reported by ``pr_results.json``.
 
     The repository pair is not in this record; it is recovered per file from
-    ``results.txt`` and promoted to the pull request by the caller.
+    ``results.json`` and promoted to the pull request by the caller.
     """
 
     number: str | None = None
@@ -188,8 +188,8 @@ def parse_pr_results(
                 results = raw_data
             else:
                 meta.diagnostics.append("pr_results.json is not a valid JSON object")
-        except (FileNotFoundError, OSError, json.JSONDecodeError) as e:
-            meta.diagnostics.append(f"pr_results.json absent or unreadable")
+        except (FileNotFoundError, OSError, json.JSONDecodeError):
+            meta.diagnostics.append("pr_results.json absent or unreadable")
     else:
         meta.diagnostics.append("pr_results.json path not provided")
 
@@ -223,7 +223,7 @@ def _calendar_day(timestamp: str | None) -> str | None:
 
 @dataclass
 class LocalizationFacts:
-    """What a file's ``results.txt`` reports about its target-side localization."""
+    """What a file's ``results.json`` reports about its target-side localization."""
 
     classification: str | None = None
     source_repo: str | None = None
@@ -261,20 +261,35 @@ def _repo_relative(raw: str | None, target_repo: str | None) -> str | None:
 
 
 def parse_results(path: Path | None) -> LocalizationFacts:
-    """Parse a file's ``results.txt``: repository pair, paths, and similarity."""
-    text = _read(path)
+    """Parse a file's ``results.json``: repository pair, paths, and similarity."""
+    results = {}
     facts = LocalizationFacts()
-    if m := _CLASSIFICATION.search(text):
-        facts.classification = m.group(1).upper()
-    facts.source_repo = _field(_MAINLINE, text)
-    facts.target_repo = _field(_DIVERGENT_REPO, text)
-    facts.source_path = _field(_SOURCE_PATH, text)
-    facts.divergent_path_raw = _field(_DIVERGENT_PATH, text)
+
+    if path is not None:
+        try:
+            raw_data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(raw_data, dict):
+                results = raw_data
+        except (FileNotFoundError, OSError, json.JSONDecodeError):
+            pass
+        
+    
+    if results.get(_CLASSIFICATION):
+        facts.classification = results[_CLASSIFICATION].upper()
+    facts.source_repo = results.get(_MAINLINE)
+    facts.target_repo = results.get(_DIVERGENT_REPO)
+    facts.source_path = results.get(_SOURCE_PATH)
+    facts.divergent_path_raw = results.get(_DIVERGENT_PATH)
     facts.divergent_path = _repo_relative(facts.divergent_path_raw, facts.target_repo)
 
-    for number, kind, threshold, percent in _SIMILARITY.findall(text):
-        hunk_id = f"H-{int(number)}"
-        sim = facts.similarity.setdefault(hunk_id, HunkSimilarity(hunk_id=hunk_id))
-        scores = sim.deletions if kind.lower() == "deletions" else sim.additions
-        scores[int(threshold)] = max(0.0, min(1.0, float(percent) / 100.0))
+    if results.get(_SIMILARITYCHECK):
+        for similarity_check in results[_SIMILARITYCHECK]:
+            match = _HUNK.search(similarity_check.get(_CHECKNAME))
+            if match:
+                number,kind = match.groups()
+            hunk_id = f"H-{int(number)}"
+            sim = facts.similarity.setdefault(hunk_id, HunkSimilarity(hunk_id=hunk_id))
+            scores = sim.deletions if kind.lower() == "deletions" else sim.additions
+            scores[similarity_check['tokenSize']] = max(0.0, 
+                min(1.0, float(similarity_check['similarityPercent']) / 100))
     return facts

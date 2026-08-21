@@ -83,7 +83,7 @@ class GACPDFile:
         """The file's real name, e.g. ``CombinedKey.java``.
 
         The directory name is the flattened source path and unusable, so the
-        name comes from the path ``results.txt`` reports, falling back to the
+        name comes from the path ``results.json`` reports, falling back to the
         artifacts GACPD emitted.
         """
         if self.localization.source_path:
@@ -147,7 +147,7 @@ def _collect_hunks(src_dir: Path) -> list[HunkArtifacts]:
 
 
 def _load_file(file_dir: Path) -> GACPDFile | None:
-    results = file_dir / "results.txt"
+    results = file_dir / "results.json"
     facts = parse_results(results if results.is_file() else None)
     if facts.classification is None:
         return None
@@ -228,7 +228,7 @@ def _promote_repository_pair(pr: GACPDPullRequest) -> None:
 
     ``pr_results.json`` never names the divergent repository, and the run
     directory abbreviates it, so the pair is recovered from the first file whose
-    ``results.txt`` reported it. A pull request whose files disagree is recorded
+    ``results.json`` reported it. A pull request whose files disagree is recorded
     as a diagnostic rather than silently resolved.
     """
     pairs = {
@@ -237,7 +237,7 @@ def _promote_repository_pair(pr: GACPDPullRequest) -> None:
         if f.localization.source_repo and f.localization.target_repo
     }
     if not pairs:
-        pr.metadata.diagnostics.append("no repository pair reported by any results.txt")
+        pr.metadata.diagnostics.append("no repository pair reported by any results.json")
         return
     source, target = sorted(pairs)[0]
     pr.metadata.source_repo = pr.metadata.source_repo or source
