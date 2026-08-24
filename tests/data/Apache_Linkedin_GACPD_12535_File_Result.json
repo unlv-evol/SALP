@@ -1,0 +1,31 @@
+{
+    "fileName": "streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/CombinedKey.java",
+    "classification": "MO",
+    "divergentPath": "Results/Repos_files/onePr_ttt/linkedin/kafka/streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/CombinedKey.java",
+    "divergentPathType": "resolved",
+    "divergentRepo": "linkedin/kafka",
+    "mainline": "apache/kafka",
+    "pr": "12535",
+    "similarityChecks": [
+        {
+            "checkName": "hunk_1_additions.java",
+            "similarityPercent": 0,
+            "tokenSize": 50
+        },
+        {
+            "checkName": "hunk_1_deletions.java",
+            "similarityPercent": 0,
+            "tokenSize": 50
+        },
+        {
+            "checkName": "hunk_1_additions.java",
+            "similarityPercent": 0,
+            "tokenSize": 40
+        },
+        {
+            "checkName": "hunk_1_deletions.java",
+            "similarityPercent": 100,
+            "tokenSize": 40
+        }
+    ]
+}

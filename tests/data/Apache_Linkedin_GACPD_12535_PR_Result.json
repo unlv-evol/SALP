@@ -1,0 +1,123 @@
+{
+    "addedFilesSkipped": [
+        "connect/runtime/src/main/java/org/apache/kafka/connect/util/ShutdownableThread.java",
+        "connect/runtime/src/test/java/org/apache/kafka/connect/util/ShutdownableThreadTest.java",
+        "connect/runtime/src/test/java/org/apache/kafka/connect/util/ThreadedTest.java",
+        "streams/src/test/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/SubscriptionStoreReceiveProcessorSupplierTest.java"
+    ],
+    "classifiedPR": "12535",
+    "cutoffDate": "2026-06-30T16:37:26Z",
+    "files": [
+        {
+            "classification": "MO",
+            "fileName": "streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/CombinedKey.java",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 50
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 50
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 40
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "similarityPercent": 100,
+                    "tokenSize": 40
+                }
+            ]
+        },
+        {
+            "classification": "NA",
+            "fileName": "streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/SubscriptionStoreReceiveProcessorSupplier.java",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 50
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 50
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 40
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 40
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 30
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 30
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 20
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 20
+                }
+            ]
+        },
+        {
+            "classification": "NA",
+            "fileName": "streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/SubscriptionWrapper.java",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 50
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 40
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 30
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "similarityPercent": 0,
+                    "tokenSize": 20
+                }
+            ]
+        },
+        {
+            "classification": "NA",
+            "fileName": "streams/src/test/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/SubscriptionStoreReceiveProcessorSupplierTest.java",
+            "similarityChecks": [
+            ]
+        }
+    ],
+    "prDescription": "This patch fixes another incorrect version check in the FK code and adds unit tests that would have caught this bug.\r\n\r\n### Committer Checklist (excluded from commit message)\r\n- [ ] Verify design and implementation \r\n- [ ] Verify test coverage and CI build status\r\n- [ ] Verify documentation (including upgrade notes)\r\n",
+    "prLocation": "https://github.com/apache/kafka/pull/12535",
+    "prTitle": "KAFKA-13769 Fix version check in SubscriptionStoreReceiveProcessorSupplier",
+    "recommendations": "TBO",
+    "renamedFiles": [
+    ],
+    "repoDivergenceDate": "2021-07-06T21:17:16Z"
+}

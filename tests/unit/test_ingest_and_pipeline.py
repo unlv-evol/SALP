@@ -1,8 +1,7 @@
 """Ingestion, physical layout, and end-to-end pipeline tests.
 
-The fixture mirrors real GACPD output: the record labels it actually emits, CRLF
-line endings, hunk artifacts that lead with their unified-diff header, and a
-similarity check reported per block kind and per token threshold.
+The fixture mirrors real GACPD output using the updated JSON structured format.
+It verifies record labels, hunk artifacts, and similarity checks.
 """
 
 from __future__ import annotations
@@ -14,48 +13,12 @@ from salp.config import Config
 from salp.ingest import discover_pull_requests
 from salp.pipeline import run
 
-SRC_PATH = "streams/src/main/java/org/apache/kafka/streams/kstream/internals/CombinedKey.java"
-
-# GACPD writes CRLF and leaves unset fields blank.
-PR_RESULTS = "\r\n".join([
-    "Classified PR: 12535",
-    "PR Title: KAFKA-13769 Fix version check in SubscriptionStoreReceiveProcessorSupplier",
-    "PR Description: This patch fixes another incorrect version check.",
-    "PR Location: https://github.com/apache/kafka/pull/12535",
-    "REPO DIVERGENCE DATE: 2022-06-02T00:00:00Z",
-    "CUTOFF DATE: 2022-12-02T23:59:59Z",
-    "",
-    "Added Files (Skipped):",
-    "Renamed Files:",
-    "Files in PR: CombinedKey.java",
-    f"Similarity analysis for:  {SRC_PATH}",
-    "  - Overall Classification is: MO",
-    "",
-    "Recommendations: TBO",
-])
-
-# The deletion block matches only at the coarsest threshold: a genuine but weak
-# alignment, which must read as reduced confidence rather than a failure.
-SIMILARITY = "\r\n".join([
-    "src/hunk_1_additions.java (50) - has a similarity of: 0%",
-    "src/hunk_1_deletions.java (50) - has a similarity of: 0%",
-    "src/hunk_1_additions.java (40) - has a similarity of: 0%",
-    "src/hunk_1_deletions.java (40) - has a similarity of: 0%",
-    "src/hunk_1_additions.java (30) - has a similarity of: 0%",
-    "src/hunk_1_deletions.java (30) - has a similarity of: 100%",
-])
-
-RESULTS = "\r\n".join([
-    "In PR: 12535",
-    "Mainline is: apache/kafka",
-    "Divergent Repo is: linkedin/kafka",
-    f"File: {SRC_PATH}",
-    f"Is called in Divergent Path is: Results/Repos_files/run_1/linkedin/kafka/{SRC_PATH}",
-    "Similarity Check:",
-    SIMILARITY,
-    "Classification: ",
-    "The final classification is: MO",
-])
+# Updated to match the paths specified in the new JSON results
+SRC_PATH = (
+    "streams/src/main/java/org/apache/kafka/streams/"
+    "kstream/internals/foreignkeyjoin/CombinedKey.java"
+)
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 # Every hunk sits in close(), so they share one function-pool entry.
 _SECTION = "public void close() throws Exception {"
@@ -70,8 +33,15 @@ def _make_fixture(root: Path, *, hunks: int = 1) -> Path:
     fdir = pr_dir / "MO" / SRC_PATH.replace("/", "_").replace(".", "_")
     (fdir / "src").mkdir(parents=True)
     (fdir / "cmp").mkdir(parents=True)
-    (pr_dir / "pr_results.txt").write_text(PR_RESULTS)
-    (fdir / "results.txt").write_text(RESULTS)
+    
+    # Load updated JSON structures from tests/data
+    with open(DATA_DIR / "Apache_Linkedin_GACPD_12535_PR_Result.json") as f:
+        pr_results = json.load(f)
+    with open(DATA_DIR / "Apache_Linkedin_GACPD_12535_File_Result.json") as f:
+        file_results = json.load(f)
+
+    (pr_dir / "pr_results.json").write_text(json.dumps(pr_results))
+    (fdir / "results.json").write_text(json.dumps(file_results))
     (fdir / "cmp" / "CombinedKey.java").write_text("class CombinedKey { }\n")
 
     patch = ["--- a/" + SRC_PATH, "+++ b/" + SRC_PATH]
@@ -84,13 +54,23 @@ def _make_fixture(root: Path, *, hunks: int = 1) -> Path:
         )
     (fdir / "src" / "CombinedKey.patch").write_text("\n".join(patch) + "\n")
 
-    na = pr_dir / "NA" / "streams_src_main_java_SubscriptionWrapper_java"
-    (na / "src").mkdir(parents=True)
-    (na / "results.txt").write_text(
-        "In PR: 12535\r\nMainline is: apache/kafka\r\nDivergent Repo is: linkedin/kafka\r\n"
-        "File: streams/src/main/java/SubscriptionWrapper.java\r\n"
-        "The final classification is: NA\r\n"
+    # Update NA sibling to use the updated JSON schema instead of text
+    na_src_path =  (
+        "streams/src/main/java/org/apache/kafka/streams/kstream/"
+        "internals/foreignkeyjoin/SubscriptionWrapper.java"
     )
+    na = pr_dir / "NA" / na_src_path.replace("/", "_").replace(".", "_")
+    (na / "src").mkdir(parents=True)
+    
+    na_results = {
+        "fileName": na_src_path,
+        "classification": "NA",
+        "divergentRepo": "linkedin/kafka",
+        "mainline": "apache/kafka",
+        "pr": "12535",
+        "similarityChecks": []
+    }
+    (na / "results.json").write_text(json.dumps(na_results))
     (na / "src" / "SubscriptionWrapper.java").write_text("class SubscriptionWrapper {}\n")
     return pr_dir
 
@@ -119,7 +99,6 @@ def test_discovery_finds_mo_file_and_retains_na_sibling(tmp_path: Path):
 def test_ingest_recovers_extension_and_real_file_name(tmp_path: Path):
     _make_fixture(tmp_path)
     mo = discover_pull_requests(tmp_path)[0].mo_files[0]
-    # the directory name is the flattened source path; the real name comes from results.txt
     assert mo.ext == "java"
     assert mo.display_name == "CombinedKey.java"
     assert mo.source_path == SRC_PATH
@@ -131,21 +110,24 @@ def test_ingest_parses_pr_metadata(tmp_path: Path):
     assert m.number == "12535"
     assert m.title.startswith("KAFKA-13769")
     assert m.url == "https://github.com/apache/kafka/pull/12535"
-    # timestamps are reduced to the calendar day
-    assert (m.divergence_date, m.cutoff_date) == ("2022-06-02", "2022-12-02")
-    # the pair is promoted from the per-file records, not the run directory,
-    # which abbreviates the divergent repository as "linked_kafka"
+    # Updated dates to match the new JSON payload
+    assert (m.divergence_date, m.cutoff_date) == ("2021-07-06", "2026-06-30")
     assert (m.source_repo, m.target_repo) == ("apache/kafka", "linkedin/kafka")
 
 
 def test_blank_field_stays_empty_instead_of_swallowing_the_next_line(tmp_path: Path):
     pr_dir = _make_fixture(tmp_path)
-    (pr_dir / "pr_results.txt").write_text(
-        "Classified PR: 2731\r\nPR Title: \r\nPR Description: \r\nPR Location: \r\n"
-        "REPO DIVERGENCE DATE: 2022-09-08T00:00:00Z\r\nCUTOFF DATE: 2023-03-08T23:59:59Z\r\n"
-    )
+    pr_json_path = pr_dir / "pr_results.json"
+    
+    # Load and manipulate the dictionary structure instead of inline text
+    pr_data = json.loads(pr_json_path.read_text())
+    pr_data["prTitle"] = ""
+    pr_data["prLocation"] = ""
+    pr_data["repoDivergenceDate"] = "2022-09-08T00:00:00Z"
+    pr_json_path.write_text(json.dumps(pr_data))
+
     m = discover_pull_requests(tmp_path)[0].metadata
-    assert m.title is None and m.url is None
+    assert not m.title and not m.url
     assert m.divergence_date == "2022-09-08"
     assert any("no title" in d for d in m.diagnostics)
 
@@ -161,10 +143,11 @@ def test_alignment_confidence_averages_the_deletion_anchor_over_thresholds(tmp_p
     """A block matching only at the coarsest threshold is reduced confidence."""
     _make_fixture(tmp_path)
     loc = discover_pull_requests(tmp_path)[0].mo_files[0].localization
-    assert loc.confidence("H-1") == 1 / 3
+    # The updated File_Result JSON provides thresholds at 50 and 40
+    assert loc.confidence("H-1") == 0.5  # 1.0 match averaged over 2 thresholds
     assert loc.breakdown("H-1") == {
-        "additions": {50: 0.0, 40: 0.0, 30: 0.0},
-        "deletions": {50: 0.0, 40: 0.0, 30: 1.0},
+        "additions": {50: 0.0, 40: 0.0},
+        "deletions": {50: 0.0, 40: 1.0},
     }
 
 
@@ -206,7 +189,6 @@ def test_na_sibling_is_retained_as_context_not_minted(tmp_path: Path):
     assert [s["sap_id"] for s in manifest["saps"]] == ["RC-12535-CombinedKey"]
     (entry,) = manifest["context_files"]
     assert entry["gacpd_classification"] == "NA"
-    # every referenced context file must exist under _context/
     assert (pr_dir / entry["path"]).is_file()
     assert not (pr_dir / "sap-SubscriptionWrapper").exists()
 
@@ -226,7 +208,6 @@ def test_every_index_payload_reference_resolves(tmp_path: Path):
 
 # --- function pool ------------------------------------------------------------
 def test_hunks_in_the_same_function_share_one_pool_entry(tmp_path: Path):
-    """f_s, f'_s, and f_t are stored once per function, not once per hunk."""
     sap_dir = _run(tmp_path, hunks=3) / "sap-CombinedKey"
     assert [p.name for p in (sap_dir / "functions").iterdir()] == ["CombinedKey_close"]
     for hunk_id in ("H-1", "H-2", "H-3"):
@@ -242,14 +223,11 @@ def test_each_hunk_gets_its_own_slice_of_the_patch(tmp_path: Path):
     assert len(set(diffs.values())) == 3, "hunks must not share one whole-file patch"
     for n, hunk_id in enumerate(("H-1", "H-2", "H-3"), start=1):
         assert f"added{n}();" in diffs[hunk_id]
-        # each slice keeps the file header, so it stays a self-contained diff
         assert diffs[hunk_id].startswith("--- a/streams")
 
 
 def test_edit_region_records_real_spans_from_the_diff_header(tmp_path: Path):
     sap_dir = _run(tmp_path) / "sap-CombinedKey"
-    doc = json.loads((sap_dir / "hunks" / "H-1" / "edit_region.json").read_text())
-    # transformation.json carries the edit-region element
     doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
     spans = next(e for e in doc["elements"] if e["element"].endswith("edit_regions"))
     assert spans["attributes"]["spans"]["source_before"]["start"] == 510
@@ -258,15 +236,6 @@ def test_edit_region_records_real_spans_from_the_diff_header(tmp_path: Path):
 
 # --- characterization over the real pipeline ---------------------------------
 def test_gacpd_only_package_characterizes_low_without_the_repositories(tmp_path: Path):
-    """Without clones, tau cannot be recovered, and that caps Readiness at Low.
-
-    tau = (f_s, f'_s, f_t) is three function bodies. GACPD supplies hunk regions
-    and a whole target file, so slicing the functions out needs the repositories
-    at their pinned states. Their absence leaves a foundational element
-    UNAVAILABLE, which the specification's first foundational condition caps at
-    Low -- the pipeline must not report a package as adaptable when the
-    transformation it is built around was never recovered.
-    """
     sap_dir = _run(tmp_path) / "sap-CombinedKey"
     profile = json.loads((sap_dir / "characterization.json").read_text())
     assert profile["aggregate"]["readiness"] == "LOW"
@@ -276,13 +245,11 @@ def test_gacpd_only_package_characterizes_low_without_the_repositories(tmp_path:
     assert hunk["readiness_preliminary"] == "MODERATE", "only the cap should lower it"
     for foundational in ("source_change", "target_localization"):
         assert hunk["category_scores"][foundational]["coverage"] == 1.0
-    # unresolved enrichment is what holds Coverage down
     assert 0 < hunk["coverage_score"] < 1.0
     assert hunk["category_scores"]["refactoring"]["coverage"] == 0.0
 
 
 def test_a_degraded_run_names_the_fix_for_the_missing_transformation(tmp_path: Path):
-    """An unrecovered tau must say what would recover it, not just report a gap."""
     sap_dir = _run(tmp_path) / "sap-CombinedKey"
     doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
     unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
