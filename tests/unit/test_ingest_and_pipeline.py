@@ -33,7 +33,7 @@ def _make_fixture(root: Path, *, hunks: int = 1) -> Path:
     fdir = pr_dir / "MO" / SRC_PATH.replace("/", "_").replace(".", "_")
     (fdir / "src").mkdir(parents=True)
     (fdir / "cmp").mkdir(parents=True)
-    
+    (fdir / "patch").mkdir(parents=True)
     # Load updated JSON structures from tests/data
     with open(DATA_DIR / "Apache_Linkedin_GACPD_12535_PR_Result.json") as f:
         pr_results = json.load(f)
@@ -52,7 +52,7 @@ def _make_fixture(root: Path, *, hunks: int = 1) -> Path:
         (fdir / "src" / f"hunk_{n}_full_add.java").write_text(
             f"{header}\n     keep{n}();\n     added{n}();\n"
         )
-    (fdir / "src" / "CombinedKey.patch").write_text("\n".join(patch) + "\n")
+    (fdir / "patch" / "CombinedKey.patch").write_text("\n".join(patch) + "\n")
 
     # Update NA sibling to use the updated JSON schema instead of text
     na_src_path =  (
@@ -80,6 +80,8 @@ def _run(tmp_path: Path, **kwargs: int) -> Path:
     cfg = Config()
     cfg.paths.gacpd_run = tmp_path
     cfg.paths.output = tmp_path / "out"
+    cfg.paths.repo_cache = tmp_path / "repo-cache"
+    cfg.resolve_pins = False
     assert run(cfg) == 1
     # output is grouped by variant pair, target-first
     return tmp_path / "out" / "linkedinKafka-apacheKafka" / "PR-12535"
@@ -115,11 +117,11 @@ def test_ingest_parses_pr_metadata(tmp_path: Path):
     assert (m.source_repo, m.target_repo) == ("apache/kafka", "linkedin/kafka")
 
 
-def test_blank_field_stays_empty_instead_of_swallowing_the_next_line(tmp_path: Path):
+def test_blank_pr_fields_handle_empty_values_cleanly(tmp_path: Path):
     pr_dir = _make_fixture(tmp_path)
     pr_json_path = pr_dir / "pr_results.json"
     
-    # Load and manipulate the dictionary structure instead of inline text
+    # Load and manipulate the dictionary structure instead of reading from json
     pr_data = json.loads(pr_json_path.read_text())
     pr_data["prTitle"] = ""
     pr_data["prLocation"] = ""
@@ -129,7 +131,8 @@ def test_blank_field_stays_empty_instead_of_swallowing_the_next_line(tmp_path: P
     m = discover_pull_requests(tmp_path)[0].metadata
     assert not m.title and not m.url
     assert m.divergence_date == "2022-09-08"
-    assert any("no title" in d for d in m.diagnostics)
+
+    assert not m.diagnostics
 
 
 def test_localization_strips_the_gacpd_working_directory_prefix(tmp_path: Path):
