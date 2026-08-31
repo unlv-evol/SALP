@@ -17,7 +17,7 @@ from pathlib import Path
 from salp.analyzers.tools import run_refactoring_miner
 from salp.characterization import CharacterizationProfile, Characterizer, aggregate_readiness
 from salp.config import Config, get_logger
-from salp.ingest import GACPDPullRequest, discover_pull_requests
+from salp.ingest import GACPDPullRequest, discover_api_files, discover_pull_requests
 from salp.models import SAP, Category, CategoryEvidence, ContextFile, PRGroup, SAPReference
 from salp.packaging import build_sap, validate_sap, write_pr_group, write_sap
 from salp.repos import (
@@ -25,6 +25,7 @@ from salp.repos import (
     clone,
     fetch_default,
     fetch_pull_request,
+    get_sha_from_api_file,
     has_pull_request_ref,
     is_cloned,
     is_slug,
@@ -181,6 +182,7 @@ def run(config: Config) -> int:
     out_dir = config.paths.output
     resolver = PinResolver(config.paths.repo_cache, enabled=config.resolve_pins)
     prs = discover_pull_requests(run_dir)
+    api_files = discover_api_files(run_dir)
     log.info("discovered %d pull request(s) under %s", len(prs), run_dir)
 
     minted = 0
@@ -218,11 +220,20 @@ def run(config: Config) -> int:
         if not config.detect_refactorings:
             refactorings = "refactoring detection disabled (detect_refactorings=false)"
         else:
+            # Reading start and end SHA primarily from state pin,
+            # and as a fallback we can retrieve using the API file in GACPD output.
+            start_sha = divergence_pin.commit if divergence_pin else None
+            end_sha = target_pin.commit if target_pin else None
+            
+            if not start_sha or not end_sha:
+                source_repo = source_pin.repo if source_pin is not None else pr.metadata.source_repo
+                start_sha, end_sha = get_sha_from_api_file(api_files, 
+                                                            source_repo, pr.metadata.number)
             refactorings = run_refactoring_miner(
                 config.tools.refactoringminer_launcher(),
                 repo_dir(config.paths.repo_cache, pr.metadata.target_repo or ""),
-                divergence_pin.commit if divergence_pin else None,
-                target_pin.commit if target_pin else None,
+                start_sha,
+                end_sha,
                 config.paths.repo_cache / ".refactoring-cache",
                 config.tools.refactoringminer_timeout,
             )

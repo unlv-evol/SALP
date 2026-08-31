@@ -28,6 +28,7 @@ from salp.repos.files import (
 )
 from salp.repos.git import (
     GitResult,
+    get_sha_from_api_file,
     git_available,
     is_commit_present,
     is_merge_commit,
@@ -47,6 +48,7 @@ __all__ = [
     "fetch_pull_request",
     "file_exists",
     "find_build_files",
+    "get_sha_from_api_file",
     "git_available",
     "grep_files",
     "has_pull_request_ref",

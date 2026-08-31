@@ -260,3 +260,11 @@ def discover_pull_requests(run_dir: Path) -> list[GACPDPullRequest]:
         ):
             prs.append(load_pull_request(pr_dir))
     return prs
+
+def discover_api_files(run_dir: Path) -> list[Path]:
+    """Find every "github_api_responses.json" file beneath a GACPD run directory"""
+    api_files: list[Path]  = []
+    for api_file in sorted(run_dir.rglob("github_api_responses.json")):
+        api_files.append(api_file)
+
+    return api_files

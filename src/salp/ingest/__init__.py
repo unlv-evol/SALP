@@ -16,6 +16,7 @@ from salp.ingest.gacpd import (
     GACPDFile,
     GACPDPullRequest,
     HunkArtifacts,
+    discover_api_files,
     discover_pull_requests,
     load_pull_request,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "HunkSimilarity",
     "LocalizationFacts",
     "PullRequestMetadata",
+    "discover_api_files",
     "discover_pull_requests",
     "hunk_side",
     "load_pull_request",
