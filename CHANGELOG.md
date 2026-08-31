@@ -129,6 +129,10 @@ All notable changes to this project are documented here, following
   in [CONTRIBUTING](CONTRIBUTING.md).
 - `LICENSE` replaced with the full Apache-2.0 text; it was a two-line
   placeholder while the package metadata already declared the licence.
+- `PR_results.json` is now used insteadof `PR_results.txt`. This is following
+  the GACPD 0.16+ update where the .txt files were changed to .json files.
+  `results.json` is now used instead of `results.txt` following the GACPD
+  0.16+ update.
 
 ### Known gaps
 

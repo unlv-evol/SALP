@@ -38,7 +38,7 @@ no token, and no rate limit:
 | Target commit | `git rev-list -1 --before=<cutoff> HEAD` |
 | File at a pin | `git show <sha>:<path>` |
 
-PR title, description, URL, and dates already come from `pr_results.txt`, so the
+PR title, description, URL, and dates already come from `pr_results.json`, so the
 API would add nothing.
 
 ## Layout

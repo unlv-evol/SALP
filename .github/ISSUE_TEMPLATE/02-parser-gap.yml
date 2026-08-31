@@ -19,8 +19,8 @@ body:
     attributes:
       label: Which record
       options:
-        - pr_results.txt (pull-request identity, dates)
-        - results.txt (repository pair, paths, similarity, classification)
+        - pr_results.json (pull-request identity, dates)
+        - results.json (repository pair, paths, similarity, classification)
         - hunk artifact (hunk_<n>_full_del / full_add / additions / deletions)
         - "*.patch (unified diff)"
         - directory layout (MO / NA / ED, file directory naming)

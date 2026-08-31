@@ -23,10 +23,10 @@ directory beneath this folder:
 data/gacpd/
   <mainline>-<divergent>/               # e.g. apache_kafka-linked_kafka
     <PR-number>_MO/
-      pr_results.txt                    # PR identity, dates, per-file summary
+      pr_results.json                   # PR identity, dates, per-file summary
       MO/                               # mapped files -> one SAP each
         <flattened source path>/        # streams_src_main_..._CombinedKey_java
-          results.txt                   # repo pair, paths, similarity, class.
+          results.josn                   # repo pair, paths, similarity, class.
           cmp/<File>.<ext>              # f_t: the divergent-repository file
           src/<File>.patch              # whole-file unified diff
           src/hunk_<n>_full_del.<ext>   # @@ header + pre-change region
@@ -45,7 +45,7 @@ roots; they are retained as context payloads under the pull request's
 The run directory name is **not** a reliable source for the repository pair — it
 abbreviates (`linked_kafka` for `linkedin/kafka`) and its separator is ambiguous
 when a repository name itself contains a hyphen (`langerhans_dogecoinj-new`).
-The pair is read from `results.txt` and promoted to the pull request.
+The pair is read from `results.json` and promoted to the pull request.
 
 ## Record formats
 
@@ -57,33 +57,93 @@ Both records use **CRLF** line endings and may leave any field blank. A blank
 field must not swallow the following line, so values are matched with horizontal
 whitespace only and an empty value degrades to `None` plus a diagnostic.
 
-### `pr_results.txt` (per pull request)
+### `pr_results.json` (per pull request)
 
 ```
-Classified PR: 12535
-PR Title: KAFKA-13769 Fix version check in SubscriptionStoreReceiveProcessorSupplier
-PR Description: <free text, may span lines>
-PR Location: https://github.com/apache/kafka/pull/12535
-REPO DIVERGENCE DATE: 2022-06-02T00:00:00Z
-CUTOFF DATE: 2022-12-02T23:59:59Z
+{
+    "classifiedPR": "12535",
+    "prTitle": "KAFKA-13769 Fix version check in SubscriptionStoreReceiveProcessorSupplier",
+    "prDescription": "This patch fixes another incorrect version check in the FK code and adds unit tests that would have caught this bug.\r\n\r\n### Committer Checklist (excluded from commit message)\r\n- [ ] Verify design and implementation \r\n- [ ] Verify test coverage and CI build status\r\n- [ ] Verify documentation (including upgrade notes)\r\n",
+    "prLocation": "https://github.com/apache/kafka/pull/12535",
+    "repoDivergenceDate": "2021-07-06T17:39:59Z",
+    "cutoffDate": "2026-06-30T16:37:26Z",
+    "addedFilesSkipped": [
+        "streams/src/test/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/SubscriptionStoreReceiveProcessorSupplierTest.java"
+    ],
+    "renamedFiles": [],
+    "files": [
+        {
+            "fileName": "streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/CombinedKey.java",
+            "fileExtension": ".java",
+            "language": "java",
+            "isConfigurationLanguage": false,
+            "patchAvailable": true,
+            "patchStatus": "available",
+            "classification": "MO",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                .....
+            ],
+            "hunks": [
+                {
+                    "classification": "MO",
+                    "number": 1,
+                    "additionsClassification": "NA",
+                    "deletionsClassification": "MO"
+                }
+            ]
+        },
+        .....
+    ],
+    "recommendations": "TBO"
+}
 ```
 
 It does **not** name the divergent repository. PR 2731 in the current sample
 leaves `PR Title`, `PR Description`, and `PR Location` blank.
 
-### `results.txt` (per file)
+### `results.json` (per file)
 
 ```
-In PR: 12535
-Mainline is: apache/kafka
-Divergent Repo is: linkedin/kafka
-File: streams/src/main/java/.../CombinedKey.java
-Is called in Divergent Path is: Results/Repos_files/<run>/linkedin/kafka/streams/.../CombinedKey.java
-Similarity Check:
-src/hunk_1_additions.java (50) - has a similarity of: 0%
-src/hunk_1_deletions.java (30) - has a similarity of: 100%
-Classification:
-The final classification is: MO
+{
+    "fileName": "streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/CombinedKey.java",
+    "fileExtension": ".java",
+    "language": "java",
+    "isConfigurationLanguage": false,
+    "pr": "12535",
+    "mainline": "apache/kafka",
+    "divergentRepo": "linkedin/kafka",
+    "changeStatus": "modified",
+    "renamed": false,
+    "renamedFileName": "",
+    "patchAvailable": true,
+    "patchStatus": "available",
+    "divergentPath": "linkedin/kafka/streams/src/main/java/org/apache/kafka/streams/kstream/internals/foreignkeyjoin/CombinedKey.java",
+    "divergentPathType": "resolved",
+    "classification": "MO",
+    "similarityChecks": [
+        {
+            "checkName": "hunk_1_additions.java",
+            "tokenSize": 50,
+            "similarityPercent": 0,
+            "directChangeClone": false
+        },
+        .....
+    ],
+    "hunks": [
+        {
+            "classification": "MO",
+            "number": 1,
+            "additionsClassification": "NA",
+            "deletionsClassification": "MO"
+        }
+    ]
+}
 ```
 
 The located path is prefixed with GACPD's own working directory; everything up
