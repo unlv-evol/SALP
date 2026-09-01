@@ -83,7 +83,7 @@ class GACPDFile:
         """The file's real name, e.g. ``CombinedKey.java``.
 
         The directory name is the flattened source path and unusable, so the
-        name comes from the path ``results.txt`` reports, falling back to the
+        name comes from the path ``results.json`` reports, falling back to the
         artifacts GACPD emitted.
         """
         if self.localization.source_path:
@@ -147,15 +147,16 @@ def _collect_hunks(src_dir: Path) -> list[HunkArtifacts]:
 
 
 def _load_file(file_dir: Path) -> GACPDFile | None:
-    results = file_dir / "results.txt"
+    results = file_dir / "results.json"
     facts = parse_results(results if results.is_file() else None)
     if facts.classification is None:
         return None
 
     patch = None
     src = file_dir / "src"
-    if src.is_dir():
-        patches = sorted(src.glob("*.patch"))
+    patch_dir = file_dir / "patch"
+    if patch_dir.is_dir():
+        patches = sorted(patch_dir.glob("*.patch"))
         patch = patches[0] if patches else None
 
     target = None
@@ -199,13 +200,13 @@ def _context_payload(file_dir: Path, target: Path | None) -> Path | None:
 
 def load_pull_request(pr_dir: Path) -> GACPDPullRequest:
     """Load one ``<PR>_MO`` directory."""
-    results_file = pr_dir / "pr_results.txt"
+    results_file = pr_dir / "pr_results.json"
     pr = GACPDPullRequest(
         pr_id=pr_dir.name,
         pr_dir=pr_dir,
         results_file=results_file if results_file.is_file() else None,
         metadata=parse_pr_results(
-            results_file if results_file.is_file() else None,
+            results_file,
             pr_dir_name=pr_dir.name,
         ),
     )
@@ -226,9 +227,9 @@ def load_pull_request(pr_dir: Path) -> GACPDPullRequest:
 def _promote_repository_pair(pr: GACPDPullRequest) -> None:
     """Lift the repository pair from the per-file records onto the pull request.
 
-    ``pr_results.txt`` never names the divergent repository, and the run
+    ``pr_results.json`` never names the divergent repository, and the run
     directory abbreviates it, so the pair is recovered from the first file whose
-    ``results.txt`` reported it. A pull request whose files disagree is recorded
+    ``results.json`` reported it. A pull request whose files disagree is recorded
     as a diagnostic rather than silently resolved.
     """
     pairs = {
@@ -237,7 +238,7 @@ def _promote_repository_pair(pr: GACPDPullRequest) -> None:
         if f.localization.source_repo and f.localization.target_repo
     }
     if not pairs:
-        pr.metadata.diagnostics.append("no repository pair reported by any results.txt")
+        pr.metadata.diagnostics.append("no repository pair reported by any results.json")
         return
     source, target = sorted(pairs)[0]
     pr.metadata.source_repo = pr.metadata.source_repo or source
@@ -254,8 +255,16 @@ def discover_pull_requests(run_dir: Path) -> list[GACPDPullRequest]:
     for pr_dir in sorted(run_dir.rglob("*_MO")):
         if not pr_dir.is_dir() or _is_ignored(pr_dir):
             continue
-        if (pr_dir / "pr_results.txt").is_file() or any(
+        if (pr_dir / "pr_results.json").is_file() or any(
             (pr_dir / b).is_dir() for b in ("MO", "NA", "ED")
         ):
             prs.append(load_pull_request(pr_dir))
     return prs
+
+def discover_api_files(run_dir: Path) -> list[Path]:
+    """Find every "github_api_responses.json" file beneath a GACPD run directory"""
+    api_files: list[Path]  = []
+    for api_file in sorted(run_dir.rglob("github_api_responses.json")):
+        api_files.append(api_file)
+
+    return api_files

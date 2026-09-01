@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,44 +24,43 @@ def _line(label: str, value: str = r".*?") -> re.Pattern[str]:
     return re.compile(rf"^{_H}{label}{_H}:{_H}({value}){_H}$", _FLAGS)
 
 
-# --- pr_results.txt ----------------------------------------------------------
-_PR_NUMBER = _line(r"Classified PR", r"\d*")
+# --- pr_results.json ----------------------------------------------------------
+_PR_NUMBER = "classifiedPR"
+
+_PR_TITLE = "prTitle"
 
 
-_PR_TITLE = _line(r"PR Title")
+_PR_LOCATION ="prLocation"
 
 
-_PR_LOCATION = _line(r"PR Location", r"\S*")
+_DIVERGENCE_DATE = "repoDivergenceDate"
 
 
-_DIVERGENCE_DATE = _line(r"REPO DIVERGENCE DATE", r"\S*")
+_CUTOFF_DATE = "cutoffDate"
 
 
-_CUTOFF_DATE = _line(r"CUTOFF DATE", r"\S*")
+# --- results.json -------------------------------------------------------------
+_MAINLINE = "mainline"
 
 
-# --- results.txt -------------------------------------------------------------
-_MAINLINE = _line(r"Mainline is", r"\S*")
+_DIVERGENT_REPO = "divergentRepo"
 
 
-_DIVERGENT_REPO = _line(r"Divergent Repo is", r"\S*")
+_SOURCE_PATH = "fileName"
 
 
-_SOURCE_PATH = _line(r"File")
+_DIVERGENT_PATH = "divergentPath"
 
 
-_DIVERGENT_PATH = _line(r"Is called in Divergent Path is")
+_CLASSIFICATION = "classification"
 
+_SIMILARITYCHECK = "similarityChecks"
 
-_CLASSIFICATION = re.compile(
-    r"final classification is\s*:\s*([A-Z]{2})", re.IGNORECASE
-)
-
+_CHECKNAME = "checkName"
 
 # e.g. "src/hunk_1_deletions.java (30) - has a similarity of: 100%"
-_SIMILARITY = re.compile(
-    r"hunk_(\d+)_(additions|deletions)\.\w+\s*\((\d+)\)\s*"
-    r"-\s*has a similarity of\s*:\s*(\d+(?:\.\d+)?)\s*%",
+_HUNK = re.compile(
+    r"^hunk_(?P<number>\d+)_(?P<mode>[a-zA-Z0-9_-]+)\.[a-zA-Z0-9]+$",
     re.IGNORECASE,
 )
 
@@ -126,10 +126,10 @@ class HunkSimilarity:
 
 @dataclass
 class PullRequestMetadata:
-    """Pull-request identity, as reported by ``pr_results.txt``.
+    """Pull-request identity, as reported by ``pr_results.json``.
 
     The repository pair is not in this record; it is recovered per file from
-    ``results.txt`` and promoted to the pull request by the caller.
+    ``results.json`` and promoted to the pull request by the caller.
     """
 
     number: str | None = None
@@ -177,28 +177,38 @@ class PullRequestMetadata:
 def parse_pr_results(
     path: Path | None, *, pr_dir_name: str | None = None
 ) -> PullRequestMetadata:
-    """Parse ``pr_results.txt`` into pull-request metadata."""
-    text = _read(path)
+    """Get the data from ``pr_results.json`` and save into pull-request metadata."""
+    results = {}
     meta = PullRequestMetadata()
 
+    if path is not None:
+        try:
+            raw_data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(raw_data, dict):
+                results = raw_data
+            else:
+                meta.diagnostics.append("pr_results.json is not a valid JSON object")
+        except (FileNotFoundError, OSError, json.JSONDecodeError):
+            meta.diagnostics.append("pr_results.json absent or unreadable")
+    else:
+        meta.diagnostics.append("pr_results.json path not provided")
+
     # the record is authoritative; the directory name is the fallback
-    meta.number = _field(_PR_NUMBER, text)
+    meta.number = results.get(_PR_NUMBER)
     if meta.number is None and pr_dir_name and (m := re.search(r"(\d+)", pr_dir_name)):
         meta.number = m.group(1)
-    meta.title = _field(_PR_TITLE, text)
-    meta.url = _field(_PR_LOCATION, text)
+    meta.title = results.get(_PR_TITLE)
+    meta.url = results.get(_PR_LOCATION)
     # dates are timestamps (2022-06-02T00:00:00Z); the calendar day is what the
     # manifest reports, the full timestamp is what resolves a commit
-    meta.divergence_timestamp = _field(_DIVERGENCE_DATE, text)
-    meta.cutoff_timestamp = _field(_CUTOFF_DATE, text)
+    meta.divergence_timestamp = results.get(_DIVERGENCE_DATE)
+    meta.cutoff_timestamp = results.get(_CUTOFF_DATE)
     meta.divergence_date = _calendar_day(meta.divergence_timestamp)
     meta.cutoff_date = _calendar_day(meta.cutoff_timestamp)
 
-    if not text:
-        meta.diagnostics.append("pr_results.txt absent or unreadable")
     for label, value in (("title", meta.title), ("url", meta.url)):
         if value is None:
-            meta.diagnostics.append(f"pr_results.txt records no {label}")
+            meta.diagnostics.append(f"pr_results.json records no {label}")
     if not (meta.divergence_date and meta.cutoff_date):
         meta.diagnostics.append("incomplete divergence/cutoff dates; pin is unbound")
     return meta
@@ -213,7 +223,7 @@ def _calendar_day(timestamp: str | None) -> str | None:
 
 @dataclass
 class LocalizationFacts:
-    """What a file's ``results.txt`` reports about its target-side localization."""
+    """What a file's ``results.json`` reports about its target-side localization."""
 
     classification: str | None = None
     source_repo: str | None = None
@@ -251,20 +261,35 @@ def _repo_relative(raw: str | None, target_repo: str | None) -> str | None:
 
 
 def parse_results(path: Path | None) -> LocalizationFacts:
-    """Parse a file's ``results.txt``: repository pair, paths, and similarity."""
-    text = _read(path)
+    """Parse a file's ``results.json``: repository pair, paths, and similarity."""
+    results = {}
     facts = LocalizationFacts()
-    if m := _CLASSIFICATION.search(text):
-        facts.classification = m.group(1).upper()
-    facts.source_repo = _field(_MAINLINE, text)
-    facts.target_repo = _field(_DIVERGENT_REPO, text)
-    facts.source_path = _field(_SOURCE_PATH, text)
-    facts.divergent_path_raw = _field(_DIVERGENT_PATH, text)
+
+    if path is not None:
+        try:
+            raw_data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(raw_data, dict):
+                results = raw_data
+        except (FileNotFoundError, OSError, json.JSONDecodeError):
+            pass
+        
+    
+    if results.get(_CLASSIFICATION):
+        facts.classification = results[_CLASSIFICATION].upper()
+    facts.source_repo = results.get(_MAINLINE)
+    facts.target_repo = results.get(_DIVERGENT_REPO)
+    facts.source_path = results.get(_SOURCE_PATH)
+    facts.divergent_path_raw = results.get(_DIVERGENT_PATH)
     facts.divergent_path = _repo_relative(facts.divergent_path_raw, facts.target_repo)
 
-    for number, kind, threshold, percent in _SIMILARITY.findall(text):
-        hunk_id = f"H-{int(number)}"
-        sim = facts.similarity.setdefault(hunk_id, HunkSimilarity(hunk_id=hunk_id))
-        scores = sim.deletions if kind.lower() == "deletions" else sim.additions
-        scores[int(threshold)] = max(0.0, min(1.0, float(percent) / 100.0))
+    if results.get(_SIMILARITYCHECK):
+        for similarity_check in results[_SIMILARITYCHECK]:
+            match = _HUNK.search(similarity_check.get(_CHECKNAME))
+            if match:
+                number,kind = match.groups()
+            hunk_id = f"H-{int(number)}"
+            sim = facts.similarity.setdefault(hunk_id, HunkSimilarity(hunk_id=hunk_id))
+            scores = sim.deletions if kind.lower() == "deletions" else sim.additions
+            scores[similarity_check['tokenSize']] = max(0.0, 
+                min(1.0, float(similarity_check['similarityPercent']) / 100))
     return facts

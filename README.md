@@ -132,7 +132,7 @@ src/salp/
 
   ingest/                 # reading GACPD output
     gacpd.py              #   discovery walk (MO scope)
-    records.py            #   pr_results.txt / results.txt parsers
+    records.py            #   pr_results.json / results.json member retrievers
     diffs.py              #   unified-diff headers, slicing, side reconstruction
 
   repos/                  # git-backed repository access

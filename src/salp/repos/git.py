@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -99,3 +100,32 @@ def is_merge_commit(commit_sha: str, repo_dir: Path) -> bool:
     if not result.ok:
         return False
     return len(result.text.split()) > 1
+
+
+def get_sha_from_api_file(
+    api_files: list[Path] | None = None,
+    repo_name: str | None = None,
+    pr: str | None = None,
+)-> tuple[str, str] | tuple[None, None]:
+    """
+    Retrieves the first and the last commit within a PR from a related API file within 
+    the pool of API files.
+    """
+    if not api_files:
+        return (None, None)
+    start_sha = ""
+    end_sha = ""
+    for api_file in api_files:
+        api_response = json.loads(api_file.read_text(encoding="utf-8"))
+        if ((pr_data := api_response.get(pr)) 
+            and (response_data := pr_data.get("response")) 
+            and (base_data := response_data.get("base"))):
+                    # Making sure this is the correct API file for the repo of the PR
+                    repo_archive_url = (base_data.get("repo") or {}).get("archive_url", "")
+                    if repo_name not in repo_archive_url:
+                        continue
+                    pr_commits= list(pr_data['commits'].keys())
+                    start_sha = pr_commits[0]
+                    end_sha = pr_commits[-1]
+                    return (start_sha, end_sha)
+    return (None, None) 

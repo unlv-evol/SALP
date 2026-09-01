@@ -58,6 +58,9 @@ All notable changes to this project are documented here, following
   per language: a missing binding is reported by name, and nothing falls back to
   another language's grammar.
 
+- **GACPD 0.16+ API Reponse File Support** The Github API responses from GACPD are now
+  exposed in the output under the 0.16 update. These will be used as a fallback mechanism
+  if the Github wire protocol could not retrieve the PR and commits information.
 ### Changed
 
 - `structural/java.py` is now `structural/syntax.py`, and its functions take the
@@ -129,6 +132,10 @@ All notable changes to this project are documented here, following
   in [CONTRIBUTING](CONTRIBUTING.md).
 - `LICENSE` replaced with the full Apache-2.0 text; it was a two-line
   placeholder while the package metadata already declared the licence.
+- `PR_results.json` is now used insteadof `PR_results.txt`. This is following
+  the GACPD 0.16+ update where the .txt files were changed to .json files.
+  `results.json` is now used instead of `results.txt` following the GACPD
+  0.16+ update.
 
 ### Known gaps
 

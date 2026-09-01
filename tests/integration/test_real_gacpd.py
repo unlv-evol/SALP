@@ -24,7 +24,7 @@ DATA = Path(__file__).resolve().parents[2] / "data" / "gacpd"
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(
-        not DATA.is_dir() or not any(DATA.rglob("pr_results.txt")),
+        not DATA.is_dir() or not any(DATA.rglob("pr_results.json")),
         reason="no GACPD sample under data/gacpd/",
     ),
 ]
@@ -88,10 +88,10 @@ def test_weak_alignment_reads_as_reduced_confidence(pull_requests):
         pytest.skip("PR 12535 not in the sample")
     (mo,) = pr.mo_files
     assert mo.display_name == "CombinedKey.java"
-    assert mo.localization.confidence("H-1") == pytest.approx(1 / 3)
+    assert mo.localization.confidence("H-1") == pytest.approx(1 / 2)
     breakdown = mo.localization.breakdown("H-1")
-    assert breakdown["deletions"] == {50: 0.0, 40: 0.0, 30: 1.0}
-    assert breakdown["additions"] == {50: 0.0, 40: 0.0, 30: 0.0}
+    assert breakdown["deletions"] == {50: 0.0, 40: 1.0}
+    assert breakdown["additions"] == {50: 0.0, 40: 0.0}
 
 
 # --- construction -------------------------------------------------------------
