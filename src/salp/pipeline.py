@@ -239,7 +239,7 @@ def run(config: Config) -> int:
             )
 
         for gf in pr.mo_files:
-            stem = Path(gf.display_name).stem or gf.name
+            stem = gf.source_path
             sap_id = f"{change_id}-{_slug(stem)}"
             sap = build_sap(
                 gf,
