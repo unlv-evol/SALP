@@ -22,6 +22,7 @@ from salp.ingest import (
 from salp.models import (
     DEFAULT_SPECS,
     SAP,
+    CategoryEvidence,
     ChangeType,
     FunctionPayload,
     Hunk,
@@ -391,17 +392,80 @@ def _input_artifacts(gf: GACPDFile, ha: HunkArtifacts) -> list[str]:
     return [str(p) for p in paths if p is not None]
 
 
-def _relationships(hunk_id: str, fn_id: str) -> list[Relationship]:
-    """Typed edges from the edit region to the objects reduction should reach.
+def _relationships(
+    hunk_id: str, 
+    fn_id: str, 
+    categories: dict[str, CategoryEvidence] | None = None
+) -> list[Relationship]:
+    """Typed edges from the edit region to objects reduction should reach.
 
     Reduction is a reachability computation rooted at the edit region, so an
     object that no edge reaches is never materialized into the adaptation
-    context. Enriched analyzers add their own edges (renamed_to, api_replaced,
-    ...) as they land; the alignment edge is always present.
+    context. The alignment edge is always present; enriched analyzers
+    contribute additional edges (calls, uses, overrides, dependencies, etc.).
     """
-    return [
+    relationships: list[Relationship] = [
         Relationship(src=f"{hunk_id}:ER-1", rel="aligned_to", dst=f"functions/{fn_id}"),
     ]
+    
+    if not categories:
+        return relationships
+    
+    # Extract inferred relationships from existing evidence
+    
+    # From target localization: if we located the corresponding target function
+    if "target_localization" in categories:
+        ce = categories["target_localization"]
+        for elem in ce.elements:
+            if elem.state.value == "PRESENT" and elem.attributes.get("target_function"):
+                target_fn = elem.attributes["target_function"]
+                relationships.append(
+                    Relationship(
+                        src=f"{hunk_id}:ER-1",
+                        rel="located_in",
+                        dst=f"functions/{target_fn}"
+                    )
+                )
+    
+    # From refactoring: if method was renamed or moved
+    if "refactoring" in categories:
+        ce = categories["refactoring"]
+        for elem in ce.elements:
+            if (elem.state.value == "PRESENT" and
+                elem.attributes.get("operation_type") == "Rename Method"):
+                    old_name = elem.attributes.get("old_name")
+                    new_name = elem.attributes.get("new_name")
+                    if old_name and new_name:
+                        relationships.append(
+                            Relationship(
+                                src=f"{hunk_id}:ER-1",
+                                rel="renamed_to",
+                                dst=f"{old_name}→{new_name}"
+                            )
+                        )
+    
+    # From structural: if we identified class/method structure
+    if "structural" in categories:
+        ce = categories["structural"]
+        for elem in ce.elements:
+            if elem.state.value == "PRESENT" and elem.attributes.get("class"):
+                class_name = elem.attributes["class"]
+                relationships.append(
+                    Relationship(
+                        src=f"{hunk_id}:ER-1",
+                        rel="within_class",
+                        dst=f"class/{class_name}"
+                    )
+                )
+    
+    # Placeholder for future enriched analyzers (static call graph, data flow, etc.)
+    # These would be populated once enriched analyzers are implemented
+    # - calls: function calls from edit region
+    # - uses: field/variable accesses
+    # - overrides: method override relationships
+    # - dependency: external dependencies
+    
+    return relationships
 
 
 def build_sap(
@@ -552,7 +616,7 @@ def build_sap(
                     fn_id=fn_id, edit_regions=[f"{source.hunk_id}:ER-1"]
                 ),
                 categories=categories,
-                relationships=_relationships(source.hunk_id, fn_id),
+                relationships=_relationships(source.hunk_id, fn_id, categories),
                 # condition 5: several plausible alignments with no supported
                 # primary caps Readiness at Moderate
                 localization_ambiguous=len(shared.get("candidates") or []) > 1,
