@@ -36,7 +36,7 @@ log = get_logger(__name__)
 
 
 def _slug(name: str) -> str:
-    return re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")[:80]
+    return re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")
 
 
 def _pr_number(pr_id: str) -> str:

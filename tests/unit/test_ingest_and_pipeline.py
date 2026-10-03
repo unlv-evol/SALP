@@ -23,6 +23,9 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 # Every hunk sits in close(), so they share one function-pool entry.
 _SECTION = "public void close() throws Exception {"
 
+# The SAP folder name of the created SAP
+SAP_FOLDER_NAME = ("sap-streams-src-main-java-org-apache-kafka"
+          "-streams-kstream-internals-foreignkeyjoin-CombinedKey-java")
 
 def _hunk_header(n: int) -> str:
     return f"@@ -{500 + n * 10},6 +{500 + n * 10},8 @@ {_SECTION}"
@@ -157,7 +160,7 @@ def test_alignment_confidence_averages_the_deletion_anchor_over_thresholds(tmp_p
 # --- physical layout ---------------------------------------------------------
 def test_layout_matches_canonical_directory_grammar(tmp_path: Path):
     pr_dir = _run(tmp_path)
-    sap_dir = pr_dir / "sap-CombinedKey"
+    sap_dir = pr_dir / SAP_FOLDER_NAME
     fn = "functions/CombinedKey_close"
     for rel in (
         "sap.json", "characterization.json", "provenance.json", "change.json",
@@ -174,7 +177,7 @@ def test_layout_matches_canonical_directory_grammar(tmp_path: Path):
 
 
 def test_payloads_are_raw_source_files_not_escaped_json(tmp_path: Path):
-    sap_dir = _run(tmp_path) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path) / SAP_FOLDER_NAME
     target = sap_dir / "functions/CombinedKey_close/target.java"
     assert target.read_text() == "class CombinedKey { }\n"
     assert (sap_dir / "hunks/H-1/hunk.diff").read_text().startswith("--- a/streams")
@@ -182,14 +185,16 @@ def test_payloads_are_raw_source_files_not_escaped_json(tmp_path: Path):
 
 def test_index_files_carry_no_program_text(tmp_path: Path):
     pr_dir = _run(tmp_path)
-    for index in (pr_dir / "pr.json", pr_dir / "sap-CombinedKey" / "sap.json"):
+    for index in (pr_dir / "pr.json", pr_dir / SAP_FOLDER_NAME / "sap.json"):
         assert "payloads" not in json.loads(index.read_text())
 
 
 def test_na_sibling_is_retained_as_context_not_minted(tmp_path: Path):
     pr_dir = _run(tmp_path)
     manifest = json.loads((pr_dir / "pr.json").read_text())
-    assert [s["sap_id"] for s in manifest["saps"]] == ["RC-12535-CombinedKey"]
+    valid_sap_id = ("RC-12535-streams-src-main-java-org-apache-kafka-streams-"
+                    "kstream-internals-foreignkeyjoin-CombinedKey-java")
+    assert [s["sap_id"] for s in manifest["saps"]] == [valid_sap_id]
     (entry,) = manifest["context_files"]
     assert entry["gacpd_classification"] == "NA"
     assert (pr_dir / entry["path"]).is_file()
@@ -197,7 +202,7 @@ def test_na_sibling_is_retained_as_context_not_minted(tmp_path: Path):
 
 
 def test_every_index_payload_reference_resolves(tmp_path: Path):
-    sap_dir = _run(tmp_path, hunks=2) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path, hunks=2) / SAP_FOLDER_NAME
     for hunk_id in ("H-1", "H-2"):
         index = json.loads((sap_dir / "hunks" / hunk_id / "hunk.json").read_text())
         refs = [v for v in index["transformation"].values() if isinstance(v, str)]
@@ -211,7 +216,7 @@ def test_every_index_payload_reference_resolves(tmp_path: Path):
 
 # --- function pool ------------------------------------------------------------
 def test_hunks_in_the_same_function_share_one_pool_entry(tmp_path: Path):
-    sap_dir = _run(tmp_path, hunks=3) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path, hunks=3) / SAP_FOLDER_NAME
     assert [p.name for p in (sap_dir / "functions").iterdir()] == ["CombinedKey_close"]
     for hunk_id in ("H-1", "H-2", "H-3"):
         index = json.loads((sap_dir / "hunks" / hunk_id / "hunk.json").read_text())
@@ -221,7 +226,7 @@ def test_hunks_in_the_same_function_share_one_pool_entry(tmp_path: Path):
 
 
 def test_each_hunk_gets_its_own_slice_of_the_patch(tmp_path: Path):
-    sap_dir = _run(tmp_path, hunks=3) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path, hunks=3) / SAP_FOLDER_NAME
     diffs = {h: (sap_dir / "hunks" / h / "hunk.diff").read_text() for h in ("H-1", "H-2", "H-3")}
     assert len(set(diffs.values())) == 3, "hunks must not share one whole-file patch"
     for n, hunk_id in enumerate(("H-1", "H-2", "H-3"), start=1):
@@ -230,7 +235,7 @@ def test_each_hunk_gets_its_own_slice_of_the_patch(tmp_path: Path):
 
 
 def test_edit_region_records_real_spans_from_the_diff_header(tmp_path: Path):
-    sap_dir = _run(tmp_path) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path) / SAP_FOLDER_NAME
     doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
     spans = next(e for e in doc["elements"] if e["element"].endswith("edit_regions"))
     assert spans["attributes"]["spans"]["source_before"]["start"] == 510
@@ -239,7 +244,7 @@ def test_edit_region_records_real_spans_from_the_diff_header(tmp_path: Path):
 
 # --- characterization over the real pipeline ---------------------------------
 def test_gacpd_only_package_characterizes_low_without_the_repositories(tmp_path: Path):
-    sap_dir = _run(tmp_path) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path) / SAP_FOLDER_NAME
     profile = json.loads((sap_dir / "characterization.json").read_text())
     assert profile["aggregate"]["readiness"] == "LOW"
 
@@ -253,7 +258,7 @@ def test_gacpd_only_package_characterizes_low_without_the_repositories(tmp_path:
 
 
 def test_a_degraded_run_names_the_fix_for_the_missing_transformation(tmp_path: Path):
-    sap_dir = _run(tmp_path) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path) / SAP_FOLDER_NAME
     doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
     unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
     assert unit["state"] == "UNAVAILABLE"
@@ -261,14 +266,14 @@ def test_a_degraded_run_names_the_fix_for_the_missing_transformation(tmp_path: P
 
 
 def test_levels_serialize_as_names(tmp_path: Path):
-    sap_dir = _run(tmp_path) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path) / SAP_FOLDER_NAME
     hunk = json.loads((sap_dir / "characterization.json").read_text())["hunks"]["H-1"]
     assert hunk["readiness_final"] in {"LOW", "MODERATE", "HIGH"}
     assert isinstance(hunk["coverage_level"], str)
 
 
 def test_composite_sap_readiness_is_minimum_over_hunks(tmp_path: Path):
-    sap_dir = _run(tmp_path, hunks=3) / "sap-CombinedKey"
+    sap_dir = _run(tmp_path, hunks=3) / SAP_FOLDER_NAME
     profile = json.loads((sap_dir / "characterization.json").read_text())
     assert profile["aggregate"]["hunk_count"] == 3
     assert profile["aggregate"]["determined_by_hunk"] in {"H-1", "H-2", "H-3"}
