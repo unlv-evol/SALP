@@ -16,7 +16,7 @@ from tests.unit.test_ingest_and_pipeline import _make_fixture
 
 from salp.characterization import Characterizer
 from salp.models import Category, CategoryEvidence, ChangeType, EvidenceObject, EvidenceState
-from salp.packaging import validate_output, validate_pr_dir, validate_sap_dir
+from salp.packaging import validate_output, validate_pr_dir, validate_pr_sap_count, validate_sap_dir
 
 from salp.config import Config  # isort: skip
 from salp.pipeline import run  # isort: skip
@@ -136,6 +136,24 @@ def test_a_cross_file_edge_naming_no_sap_is_caught(written: Path):
     ]
     manifest_path.write_text(json.dumps(manifest))
     assert any("names no SAP here" in e for e in validate_pr_dir(pr_dir).errors)
+
+
+def test_sap_count_matches_mo_file_count(written: Path):
+    """A conformant PR has SAP count equal to MO file count."""
+    pr_dir = next(written.glob("*/PR-*"))
+    # The fixture has 1 MO file (hunks=2 means 2 hunks in one file)
+    report = validate_pr_sap_count(pr_dir, 1)
+    assert report.ok, report.errors
+
+
+def test_sap_count_mismatch_is_caught(written: Path):
+    """SAP count mismatch with MO file count is detected."""
+    pr_dir = next(written.glob("*/PR-*"))
+    # Report 5 MO files when only 1 SAP was written
+    report = validate_pr_sap_count(pr_dir, 5)
+    assert not report.ok
+    assert any("SAP count mismatch" in e and "1 SAP directory" in e and "5 MO file(s)" in e
+               for e in report.errors)
 
 
 # --- regression: the scoring must not drift silently --------------------------

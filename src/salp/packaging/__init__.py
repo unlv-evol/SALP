@@ -8,6 +8,7 @@ from salp.packaging.schema import (
     Report,
     validate_output,
     validate_pr_dir,
+    validate_pr_sap_count,
     validate_sap_dir,
 )
 from salp.packaging.validation import (
@@ -26,6 +27,7 @@ __all__ = [
     "Report",
     "validate_output",
     "validate_pr_dir",
+    "validate_pr_sap_count",
     "validate_sap_dir",
     "build_sap",
     "category_confidence",

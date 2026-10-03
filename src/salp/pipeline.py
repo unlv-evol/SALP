@@ -12,14 +12,13 @@ under the pull request and referenced by the MO SAPs of that pull request.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from salp.analyzers.tools import run_refactoring_miner
 from salp.characterization import CharacterizationProfile, Characterizer, aggregate_readiness
 from salp.config import Config, get_logger
 from salp.ingest import GACPDPullRequest, discover_api_files, discover_pull_requests
 from salp.models import SAP, Category, CategoryEvidence, ContextFile, PRGroup, SAPReference
-from salp.packaging import build_sap, validate_sap, write_pr_group, write_sap
+from salp.packaging import build_sap, validate_pr_sap_count, validate_sap, write_pr_group, write_sap
 from salp.repos import (
     PinResolver,
     clone,
@@ -276,6 +275,12 @@ def run(config: Config) -> int:
 
         if group.saps:
             write_pr_group(group, pr_dir)
+
+            # Validate that all MO files were converted to SAPs
+            mo_count = len(pr.mo_files)
+            count_report = validate_pr_sap_count(pr_dir, mo_count)
+            for problem in count_report.errors:
+                log.error("%s", problem)
 
     log.info("minted %d SAP(s) total", minted)
     return minted

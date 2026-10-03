@@ -255,6 +255,32 @@ def validate_pr_dir(pr_dir: Path) -> Report:
     return report
 
 
+def validate_pr_sap_count(pr_dir: Path, mo_file_count: int) -> Report:
+    """Validate that the number of SAPs written to disk matches the number of MO files in
+      GACPD input.
+
+    This checks that all MO files from the GACPD input were successfully converted to SAPs,
+    regardless of repository. Counts actual SAP directories on disk (sap-*) rather than
+    trusting the manifest, to catch cases where SAPs overwrote each other due to naming collisions.
+    """
+    report = Report()
+    
+    # Count actual SAP directories on disk (the ground truth)
+    sap_dirs = sorted([d for d in pr_dir.iterdir() if d.is_dir() and d.name.startswith("sap-")])
+    sap_count = len(sap_dirs)
+    
+    # Check total count
+    if sap_count != mo_file_count:
+        report.fail(
+            f"{pr_dir.name}",
+            f"SAP count mismatch: {sap_count} SAP directory(ies)"
+            f" on disk but {mo_file_count} MO file(s) "
+            f"in GACPD input (every MO file should produce exactly one SAP)"
+        )
+    
+    return report
+
+
 def validate_output(root: Path) -> Report:
     """Validate every pull-request grouping beneath an output directory."""
     report = Report()
