@@ -14,6 +14,7 @@ from salp.ingest import (
     GACPDPullRequest,
     HunkArtifacts,
     HunkHeader,
+    changed_spans,
     hunk_side,
     parse_hunk_header,
     revert_patch,
@@ -82,6 +83,22 @@ class _HunkSource:
         self.header: HunkHeader | None = parse_hunk_header(self.before) or parse_hunk_header(
             self.after
         )
+
+    def edit_span(self, side: str = "") -> tuple[int,int] | None:
+        """The range to locate this hunk's enclosing function from.
+
+        The changed lines where the diff yields them, the whole hunk span --
+        context included -- where it does not.
+        """
+        before_lines, after_lines = changed_spans(diff = self.diff, header = self.header)
+        if side =="before":
+            return before_lines
+        elif side == "after":
+            return after_lines
+        else:
+            return None
+
+
 
     def attach_diff(self, diff: str | None) -> None:
         """Attach the hunk's own diff, recovering either side GACPD omitted.
@@ -233,17 +250,11 @@ class _FileStates:
     target_whole: str | None = None
 
 
-def _enclosing_function(
-    text: str | None, header: HunkHeader | None, side: str, ext: str
-) -> Any | None:
+def _enclosing_function(text: str | None, span: tuple[int, int] | None, ext: str) -> Any | None:
     """The context around a hunk's edit region in a whole file, method or not."""
-    if not text or header is None or grammar_for(ext) is None:
+    if not text or span is None or grammar_for(ext) is None:
         return None
-    start, end = (
-        (header.old_start, header.old_end) if side == "before"
-        else (header.new_start, header.new_end)
-    )
-    return locate(text, start, end, ext)
+    return locate(text, span[0], span[1], ext)
 
 
 def _no_function_reason(files: _FileStates, ctx: Any | None, ext: str) -> str:
@@ -306,8 +317,10 @@ def _build_function_pool(
         fn = FunctionPayload(fn_id=fn_id, ext=ext)
         header = next((m.header for m in members if m.header), None)
 
-        after_ctx = _enclosing_function(files.source_after, header, "after", ext)
-        before_ctx = _enclosing_function(files.source_before, header, "before", ext)
+        anchor = next((m for m in members if m.header), None)
+        after_ctx = _enclosing_function(files.source_after, anchor and anchor.edit_span("after"),ext)
+        print(f"after_ctx: {after_ctx.method_name}")
+        before_ctx = _enclosing_function(files.source_before, anchor and anchor.edit_span("before"), ext)
         if not ((after_ctx and after_ctx.has_method) or (before_ctx and before_ctx.has_method)):
             fn.no_function_reason = _no_function_reason(files, after_ctx or before_ctx, ext)
 

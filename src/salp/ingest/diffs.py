@@ -51,6 +51,7 @@ class HunkHeader:
     old_count: int
     new_start: int
     new_count: int
+    header_text: str
     section: str | None = None
 
     @property
@@ -78,7 +79,7 @@ class HunkHeader:
         section heading for them. Grouping on the whole heading is safe even
         when no name can be extracted from it.
         """
-        return " ".join(self.section.split()) if self.section else None
+        return self.header_text if self.header_text else None
 
     def declared_name(self) -> str | None:
         """The declared function name, when the heading really is a declaration.
@@ -108,7 +109,8 @@ def parse_hunk_header(text: str | None) -> HunkHeader | None:
         old_count=int(old_count) if old_count is not None else 1,
         new_start=int(new_start),
         new_count=int(new_count) if new_count is not None else 1,
-        section=section.strip() or None,
+        header_text=m.group(0) or None,
+        section=section.strip() or None
     )
 
 
@@ -148,6 +150,112 @@ def hunk_side(diff: str | None, *, side: str) -> str | None:
                 lines.append(line)
     return "\n".join(lines) + "\n" if lines else None
 
+def _anchor(line: int | None, low: int, high: int) -> tuple[int, int] | None:
+    """A one-line span where a hunk changes nothing on one side.
+
+    A pure insertion deletes no line, so the pre-change file has no changed
+    line to report -- but it does have the point the insertion goes in front
+    of, and the function enclosing that point is what the caller is after.
+    Clamped because an insertion past the hunk's last line leaves the cursor
+    one beyond it.
+    """
+    if line is None:
+        return None
+    held = min(max(line, low), high)
+    return held, held
+
+def _hunk_body(diff: str, header: HunkHeader | None) -> tuple[HunkHeader, str] | None:
+    """One hunk of a unified diff: its parsed header and its body text.
+
+    ``header`` selects which hunk when the text carries several, which it does
+    whenever the patch could not be split per hunk and every hunk was handed
+    the whole thing. Without one the first hunk is taken.
+    """
+    matches = list(_HUNK_HEADER.finditer(diff))
+    for i, m in enumerate(matches):
+        parsed = parse_hunk_header(diff[m.start() : m.end()])
+        if parsed is None:  # pragma: no cover - the match guarantees a header
+            continue
+        if header is not None and (parsed.old_start, parsed.new_start) != (
+            header.old_start,
+            header.new_start,
+        ):
+            continue
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(diff)
+        body = diff[m.end() : end]
+        # The header match ends before its own line terminator, so the body
+        # opens with one. Left in, splitlines() yields a leading "" that reads
+        # as an empty context line and shifts the whole hunk by one.
+        return parsed, body[1:] if body.startswith("\n") else body
+    return None
+
+def changed_spans(
+    diff: str | None, *, header: HunkHeader | None = None
+) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
+    """The pre- and post-change line ranges of the lines a hunk actually edits.
+
+    The ``@@`` counts cover the changed lines *and* the context git padded them
+    with, so a hunk editing one line inside a method routinely reports a span
+    reaching from the method before it into the one after. An enclosing
+    function located from that span resolves to the class body rather than to a
+    method, which is what makes the surrounding-method lookup pick a neighbour.
+
+    A hunk body is a merged transcript of two files: a context line exists in
+    both, a ``-`` line only in the pre-change file, a ``+`` line only in the
+    post-change one. Walking it with one cursor per file -- each advanced only
+    by the lines its own file contains -- numbers every line the way that file
+    numbers it, and the lines carrying a marker are the edit region.
+
+    Returns ``(before, after)``, each an inclusive 1-based range, or None for a
+    side whose range could not be established. The caller then stays on the
+    header span, which is what it would have used anyway.
+    """
+    if not diff:
+        return None, None
+    found = _hunk_body(diff, header)
+    if found is None:
+        return None, None
+    hunk, body = found
+
+    old, new = hunk.old_start, hunk.new_start
+    deleted: list[int] = []
+    added: list[int] = []
+    # Where a one-sided hunk meets the file it does not touch, for `_anchor`.
+    insert_at: int | None = None
+    delete_at: int | None = None
+    for line in body.splitlines():
+        if line.startswith("\\"):  # "\ No newline at end of file"
+            continue
+        if line.startswith("-"):
+            delete_at = new if delete_at is None else delete_at
+            deleted.append(old)
+            old += 1
+        elif line.startswith("+"):
+            insert_at = old if insert_at is None else insert_at
+            added.append(new)
+            new += 1
+        elif line.startswith(" ") or line == "":
+            old += 1
+            new += 1
+        else:  # past the end of this hunk's body
+            break
+
+    # Each cursor advances exactly once per line of its own file, and the header
+    # declares how many those are, so a body consistent with its header leaves
+    # both one past their last line. Anything else -- a truncated body, a
+    # mis-sliced patch -- would still yield a span, and a span that is plausible
+    # but wrong is worse than none: it silently relocates the edit region.
+    if (old, new) != (hunk.old_start + hunk.old_count, hunk.new_start + hunk.new_count):
+        return None, None
+
+    return (
+        (deleted[0], deleted[-1])
+        if deleted
+        else _anchor(insert_at, hunk.old_start, hunk.old_end),
+        (added[0], added[-1])
+        if added
+        else _anchor(delete_at, hunk.new_start, hunk.new_end),
+    )
 
 def revert_patch(after_text: str | None, patch: str | None) -> str | None:
     """Reconstruct the pre-change file from the post-change file and its diff.
