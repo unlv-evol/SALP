@@ -83,6 +83,7 @@ __all__ = [
     "ClassStructure",
     "ControlFlow",
     "EditContext",
+    "find_class_in_target",
     "Grammar",
     "Invocation",
     "MethodRef",
@@ -113,6 +114,7 @@ __all__ = [
     "parse",
     "query",
     "referenced_classes",
+    "retrieve_class",
     "sort_by_position",
     "to_ast_dict",
 ]

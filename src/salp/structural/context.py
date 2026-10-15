@@ -322,7 +322,7 @@ def locate_method(
         diagnostics=note,
     )
 
-def retrieve_class(node: Any, grammar: Grammar) -> str | None:
+def retrieve_class(node: Any, grammar: Grammar | None) -> str | None:
     """This function is used to discover the source side enclosing class of a node.
     This can be usefull for name-matching to find the corresponding class of the target
     file, when the target file's method cannot be found. 
@@ -333,14 +333,16 @@ def retrieve_class(node: Any, grammar: Grammar) -> str | None:
             if current.type in grammar.class_like:
                 name_node = current.child_by_field_name('name')
                 if name_node and name_node.text:
-                    return name_node.text.decode('utf-8')
+                    return str(name_node.text.decode('utf-8'))
                 return None
                 
             current = current.parent
             
     return None
 
-def find_class_in_target(class_name: str, target_whole_file: str, grammar: Grammar) -> str | None:
+def find_class_in_target(class_name: str | None, 
+                         target_whole_file: str | None, 
+                         grammar: Grammar | None) -> str | None:
     """This function takes in a name string for a class, and searches all the classes
     in the target file to find the corresponding class in the target file, and returns
     the string of the class or none if not found.
@@ -352,11 +354,10 @@ def find_class_in_target(class_name: str, target_whole_file: str, grammar: Gramm
             
         source_bytes = target_whole_file.encode("utf-8")
         
-        def traverse(node) -> str | None:
+        def traverse(node: Any) -> str | None:
             if node.type in grammar.class_like:
                 name_node = node.child_by_field_name('name')
-                if name_node and name_node.text:
-                    if name_node.text.decode("utf-8") == class_name:
+                if name_node and name_node.text and name_node.text.decode("utf-8") == class_name:
                         return source_bytes[node.start_byte:node.end_byte].decode("utf-8")
             
             for child in node.children:

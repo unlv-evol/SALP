@@ -51,7 +51,7 @@ class HunkHeader:
     old_count: int
     new_start: int
     new_count: int
-    header_text: str
+    header_text: str | None = None
     section: str | None = None
 
     @property

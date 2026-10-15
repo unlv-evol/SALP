@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from enum import Enum
+
 from pydantic import BaseModel, Field
 
 from salp.models.categories import CategoryEvidence, ChangeType
 from salp.models.evidence import Provenance
+
 
 class TargetType(Enum):
     """Used to specify what type the target (f_t) has"""
@@ -67,7 +69,7 @@ class FunctionPayload(BaseModel):
 
     @property
     def has_target_function(self) -> bool:
-        return self.has_target and self.target_type
+        return self.has_target and self.target_type == TargetType.METHOD
 
     @property
     def dir_ref(self) -> str:

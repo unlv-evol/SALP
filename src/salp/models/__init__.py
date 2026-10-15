@@ -34,6 +34,7 @@ from salp.models.sap import (
     PRGroup,
     Relationship,
     SAPReference,
+    TargetType,
     TransformationUnit,
 )
 
@@ -59,6 +60,7 @@ __all__ = [
     "RequirementLevel",
     "SAP",
     "SAPReference",
+    "TargetType",
     "TransformationUnit",
     "element_spec",
     "elements_for",

@@ -30,10 +30,18 @@ from salp.models import (
     Provenance,
     Relationship,
     RepositoryStatePin,
+    TargetType,
     TransformationUnit,
 )
 from salp.repos import grep_files, read_dependencies, read_file
-from salp.structural import EditContext, find_class_in_target, grammar_for, locate, locate_method, retrieve_class
+from salp.structural import (
+    EditContext,
+    find_class_in_target,
+    grammar_for,
+    locate,
+    locate_method,
+    retrieve_class,
+)
 
 log = get_logger(__name__)
 
@@ -250,7 +258,8 @@ class _FileStates:
     target_whole: str | None = None
 
 
-def _enclosing_function(text: str | None, span: tuple[int, int] | None, ext: str) -> EditContext | None:
+def _enclosing_function(text: str | None, 
+                        span: tuple[int, int] | None, ext: str) -> EditContext | None:
     """The context around a hunk's edit region in a whole file, method or not."""
     if not text or span is None or grammar_for(ext) is None:
         return None
@@ -315,11 +324,17 @@ def _build_function_pool(
 
     for fn_id, members in grouped.items():
         fn = FunctionPayload(fn_id=fn_id, ext=ext)
-        header = next((m.header for m in members if m.header), None)
 
         anchor = next((m for m in members if m.header), None)
-        after_ctx = _enclosing_function(files.source_after, anchor and anchor.edit_span("after"),ext)
-        before_ctx = _enclosing_function(files.source_before, anchor and anchor.edit_span("before"), ext)
+        if anchor:
+            after_ctx = _enclosing_function(files.source_after, 
+                                            anchor.edit_span("after"),ext)
+            before_ctx = _enclosing_function(files.source_before, 
+                                            anchor.edit_span("before"), ext)
+        else:
+            after_ctx = None
+            before_ctx = None
+            
         if not ((after_ctx and after_ctx.has_method) or (before_ctx and before_ctx.has_method)):
             fn.no_function_reason = _no_function_reason(files, after_ctx or before_ctx, ext)
 
@@ -354,16 +369,22 @@ def _build_function_pool(
             fn.has_target = True
             fn.target_signature = target_ctx.method_signature
             fn.target_match_kind = target_ctx.match_kind
-        else: # This would be the case where a method was not found, but a class might be feasable to find .
-            if source_side_class_name := retrieve_class(after_ctx._node, after_ctx._grammar):
-                target_class = find_class_in_target(source_side_class_name, files.target_whole, after_ctx._grammar)
+        else: 
+            # This would be the case where a method was 
+            # not found, but a class might be feasable to find .
+            if (after_ctx and 
+               (source_side_class_name := retrieve_class(after_ctx._node, after_ctx._grammar))
+            ):
+                target_class = find_class_in_target(source_side_class_name, 
+                                                    files.target_whole, after_ctx._grammar)
                 if target_class is not None:
                     sap.add_payload(fn.target_ref, target_class)
                     fn.has_target = True
-                    fn.target_type = 2 # Target type 2 is class
+                    fn.target_type = TargetType.CLASS
                     fn.target_diagnostics = (
                         target_ctx.diagnostics if target_ctx is not None
-                        else "could not find target file method, it may not exist in the target file."
+                        else ("could not find target file method," \
+                               "it may not exist in the target file.")
                     )
                 else:
                     if files.target_whole is not None:
@@ -371,7 +392,7 @@ def _build_function_pool(
                         # best available evidence, but it is a file, not f_t.
                         sap.add_payload(fn.target_ref, files.target_whole)
                         fn.has_target = True
-                        fn.target_type = 3 # Target type 3 is whole file
+                        fn.target_type = TargetType.WHOLE_FILE
                         fn.target_diagnostics = (
                             target_ctx.diagnostics if target_ctx is not None
                             else "no pinned target file or no grammar; run `salp fetch-repos`"
