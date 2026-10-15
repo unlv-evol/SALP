@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from pydantic import BaseModel, Field
 
 from salp.models.categories import CategoryEvidence, ChangeType
 from salp.models.evidence import Provenance
 
+class TargetType(Enum):
+    """Used to specify what type the target (f_t) has"""
+    METHOD = 1
+    CLASS = 2
+    WHOLE_FILE = 3
 
 class FunctionPayload(BaseModel):
     """De-duplicated, function-level payloads shared across the hunks of a file.
@@ -35,6 +41,7 @@ class FunctionPayload(BaseModel):
     target_diagnostics: str | None = None
     source_before_is_region: bool = False
     source_after_is_region: bool = False
+    target_type: TargetType = TargetType.METHOD
     target_is_whole_file: bool = False
     # Why no enclosing function was found, when none was. Set from the reason
     # constants in `packaging.builder`.
@@ -60,7 +67,7 @@ class FunctionPayload(BaseModel):
 
     @property
     def has_target_function(self) -> bool:
-        return self.has_target and not self.target_is_whole_file
+        return self.has_target and self.target_type
 
     @property
     def dir_ref(self) -> str:

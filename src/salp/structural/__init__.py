@@ -21,12 +21,14 @@ from salp.structural.context import (
     MATCH_NAME_ARITY,
     EditContext,
     file_context,
+    find_class_in_target,
     imported_class_names,
     imports_of,
     locate,
     locate_method,
     methods_overlapping,
     package_of,
+    retrieve_class,
     to_ast_dict,
 )
 from salp.structural.grammars import (

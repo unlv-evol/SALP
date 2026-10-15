@@ -35,6 +35,7 @@ class EditContext:
     package: str | None = None
     imports: list[str] = field(default_factory=list)
     class_name: str | None = None
+    class_source: str | None = None
     method_name: str | None = None
     method_signature: str | None = None
     method_span: tuple[int, int] | None = None
@@ -48,6 +49,7 @@ class EditContext:
     diagnostics: str | None = None
     _method_node: Any = None
     _tree: Any = None
+    _node: Any = None # The tree sitter node that represents the common descendent of the region
     _grammar: Grammar | None = None
 
     @property
@@ -164,7 +166,7 @@ def locate(source: str, start_line: int, end_line: int, ext: str) -> EditContext
     if node is None:
         ctx.diagnostics = "no named node covers the edit region"
         return ctx
-
+    ctx._node = node
     # An edit region that crosses a method boundary has no single enclosing
     # method, so the smallest covering node is the class body. Selecting the
     # methods the region *overlaps* recovers what containment cannot.
@@ -320,6 +322,52 @@ def locate_method(
         diagnostics=note,
     )
 
+def retrieve_class(node: Any, grammar: Grammar) -> str | None:
+    """This function is used to discover the source side enclosing class of a node.
+    This can be usefull for name-matching to find the corresponding class of the target
+    file, when the target file's method cannot be found. 
+    """
+    if node and grammar:
+        current = node
+        while current is not None:
+            if current.type in grammar.class_like:
+                name_node = current.child_by_field_name('name')
+                if name_node and name_node.text:
+                    return name_node.text.decode('utf-8')
+                return None
+                
+            current = current.parent
+            
+    return None
+
+def find_class_in_target(class_name: str, target_whole_file: str, grammar: Grammar) -> str | None:
+    """This function takes in a name string for a class, and searches all the classes
+    in the target file to find the corresponding class in the target file, and returns
+    the string of the class or none if not found.
+    """
+    if class_name and target_whole_file and grammar:
+        tree = parse(target_whole_file, grammar)
+        if not tree:
+            return None
+            
+        source_bytes = target_whole_file.encode("utf-8")
+        
+        def traverse(node) -> str | None:
+            if node.type in grammar.class_like:
+                name_node = node.child_by_field_name('name')
+                if name_node and name_node.text:
+                    if name_node.text.decode("utf-8") == class_name:
+                        return source_bytes[node.start_byte:node.end_byte].decode("utf-8")
+            
+            for child in node.children:
+                result = traverse(child)
+                if result is not None:
+                    return result
+            return None
+
+        return traverse(tree.root_node)
+
+    return None
 
 def to_ast_dict(node: Any, source: str, *, include_text: bool = False) -> dict[str, object]:
     """A JSON-serializable AST, normalized away from parser internals.
