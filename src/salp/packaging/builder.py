@@ -38,6 +38,7 @@ from salp.structural import (
     EditContext,
     find_class_in_target,
     grammar_for,
+    imports_of,
     locate,
     locate_method,
     retrieve_class,
@@ -359,44 +360,49 @@ def _build_function_pool(
             fn.source_before_is_region = True
 
 
-        target_ctx = (
-            locate_method(files.target, fn.signature or "", fn.method_name, ext)
-            if files.target and fn.signature and grammar_for(ext) is not None
-            else None
-        )
-        if target_ctx is not None and target_ctx.method_source:
+        target_ctx = locate_method(files.target, fn.signature or "", fn.method_name, ext)
+        f_t_saved = False
+        # Fallback 1: The method in the target was found. Returning it.
+        if target_ctx.method_source:
             sap.add_payload(fn.target_ref, target_ctx.method_source)
             fn.has_target = True
             fn.target_signature = target_ctx.method_signature
             fn.target_match_kind = target_ctx.match_kind
-        else: 
-            # This would be the case where a method was 
-            # not found, but a class might be feasable to find .
-            if (after_ctx and 
-               (source_side_class_name := retrieve_class(after_ctx._node, after_ctx._grammar))
+            f_t_saved = True
+        # Fallback 2: The method was not found, but this might be because
+        # the hunk is not entirely in a method. Return the target class based
+        # on name matching with source class if possible.
+        if (not f_t_saved and after_ctx and 
+            (source_side_class_name := retrieve_class(after_ctx._node, after_ctx._grammar))
             ):
-                target_class = find_class_in_target(source_side_class_name, 
-                                                    files.target_whole, after_ctx._grammar)
-                if target_class is not None:
-                    sap.add_payload(fn.target_ref, target_class)
-                    fn.has_target = True
-                    fn.target_type = TargetType.CLASS
-                    fn.target_diagnostics = (
-                        target_ctx.diagnostics if target_ctx is not None
-                        else ("could not find target file method," \
-                               "it may not exist in the target file.")
-                    )
-                else:
-                    if files.target_whole is not None:
-                        # The counterpart could not be isolated; the whole file is still the
-                        # best available evidence, but it is a file, not f_t.
-                        sap.add_payload(fn.target_ref, files.target_whole)
-                        fn.has_target = True
-                        fn.target_type = TargetType.WHOLE_FILE
-                        fn.target_diagnostics = (
-                            target_ctx.diagnostics if target_ctx is not None
-                            else "no pinned target file or no grammar; run `salp fetch-repos`"
-                        )
+            target_class = find_class_in_target(source_side_class_name, 
+                                                files.target_whole, after_ctx._grammar)
+            if target_class is not None:
+                sap.add_payload(fn.target_ref, target_class)
+                fn.has_target = True
+                fn.target_type = TargetType.CLASS
+                fn.target_diagnostics = target_ctx.diagnostics
+                f_t_saved = True
+        # Fallback 3: If source has no class, it could be an import block
+        if (not f_t_saved and after_ctx and 
+            after_ctx.is_import_region and target_ctx._tree is not None and 
+            files.target_whole is not None):
+            target_imports_block = imports_of(target_ctx._tree, files.target_whole, 
+                                              grammar_for(ext), remove_semi_colon = False)
+            if target_imports_block is not None:
+                sap.add_payload(fn.target_ref, '\n'.join(target_imports_block))
+                fn.has_target = True
+                fn.target_type = TargetType.IMPORTS_BLOCK
+                fn.target_diagnostics = target_ctx.diagnostics
+                f_t_saved = True
+        # Fallback 4: Every other fallback failed, return the entire target
+        # file for f_t. This is still better than not returning anything.
+        if not f_t_saved and files.target_whole is not None:
+            sap.add_payload(fn.target_ref, files.target_whole)
+            fn.has_target = True
+            fn.target_type = TargetType.WHOLE_FILE
+            fn.target_diagnostics = target_ctx.diagnostics
+            f_t_saved = True
         sap.functions[fn_id] = fn
 
 

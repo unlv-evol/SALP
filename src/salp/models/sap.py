@@ -15,6 +15,7 @@ class TargetType(Enum):
     METHOD = 1
     CLASS = 2
     WHOLE_FILE = 3
+    IMPORTS_BLOCK = 4
 
 class FunctionPayload(BaseModel):
     """De-duplicated, function-level payloads shared across the hunks of a file.

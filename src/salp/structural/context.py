@@ -82,7 +82,8 @@ def package_of(source: str, ext: str) -> str | None:
     return _package_of(tree, source, grammar) if tree is not None and grammar else None
 
 
-def imports_of(tree: Any, source: str, grammar: Grammar | None) -> list[str]:
+def imports_of(tree: Any, source: str, grammar: Grammar | None, 
+               remove_semi_colon: bool = True) -> list[str]:
     """Every import declaration in the file, in source order."""
     if grammar is None:
         return []
@@ -90,7 +91,8 @@ def imports_of(tree: Any, source: str, grammar: Grammar | None) -> list[str]:
         tree.root_node if tree else None, f"({grammar.import_declaration}) @i", grammar
     )
     return [
-        node_text(n, source).strip().rstrip(";")
+        (node_text(n, source).strip().rstrip(";")
+         if remove_semi_colon else node_text(n, source).strip())
         for n in sort_by_position(captures.get("i", []))
     ]
 
@@ -239,7 +241,7 @@ def file_context(source: str, ext: str) -> EditContext:
 
 
 def locate_method(
-    source: str, signature: str, name: str | None, ext: str
+    source: str | None, signature: str | None, name: str | None, ext: str | None
 ) -> EditContext:
     """Find a method by *correspondence*, not by line number.
 
@@ -253,21 +255,27 @@ def locate_method(
     An overload resolved by name alone is genuinely ambiguous; the first in file
     order is returned and the ambiguity is recorded in ``diagnostics``.
     """
+    if ext is None:
+        return EditContext(diagnostics="There was no extension for file")
     grammar = grammar_for(ext)
     if grammar is None:
         return EditContext(diagnostics=diagnostic_for(ext))
+    if source is None:
+            return EditContext(diagnostics='There is no source file, make\
+                                             sure to run "salp fetch-repos"')
     tree = parse(source, grammar)
     if tree is None:
         return EditContext(diagnostics="file is empty or could not be parsed")
-    if not signature and not name:
-        return EditContext(diagnostics="no source signature to match against")
+    if not (signature or name):
+        return EditContext(diagnostics="no source signature to match against", _tree = tree)
 
     captures = query(tree.root_node, f"{_any_of(grammar.method_like)} @method", grammar)
     methods = sort_by_position(captures.get("method", []))
 
     wanted_name = name or ""
-    wanted_arity = _parameter_count(signature)
-    by_signature = [m for m in methods if method_signature(m, source, grammar) == signature]
+    wanted_arity = (_parameter_count(signature) if signature is not None else None)
+    by_signature = ([m for m in methods if method_signature(m, source, grammar) == signature] 
+                    if signature is not None else None)
     by_name = [m for m in methods if method_name(m, source) == wanted_name]
     by_name_arity = [
         m for m in by_name
