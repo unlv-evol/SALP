@@ -37,8 +37,13 @@ def _method_ast(ctx: EditContext, source: str) -> dict[str, object]:
 def _correspondences(
     source_ctx: EditContext, target_ctx: EditContext | None
 ) -> list[dict[str, object]]:
-    """Source-to-target structural correspondences, and whether each aligns."""
-    if target_ctx is None or not target_ctx.found:
+    """Source-to-target structural correspondences, and whether each aligns.
+
+    Keyed on whether the target file parsed rather than on ``found``: a target
+    with no counterpart method is not found, yet its package and class still
+    correspond to the source's, and an unaligned method is itself a finding.
+    """
+    if target_ctx is None or target_ctx._tree is None:
         return []
     pairs = [
         ("package", source_ctx.package, target_ctx.package),

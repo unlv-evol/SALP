@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import salp.packaging.builder as builder
 from salp.config import Config
 from salp.ingest import discover_pull_requests
 from salp.pipeline import run
@@ -90,6 +91,12 @@ def _run(tmp_path: Path, **kwargs: int) -> Path:
     return tmp_path / "out" / "linkedinKafka-apacheKafka" / "PR-12535"
 
 
+def _function_dir(sap_dir: Path, hunk_id: str) -> str:
+    """The function-pool folder a hunk's transformation points at."""
+    index = json.loads((sap_dir / "hunks" / hunk_id / "hunk.json").read_text())
+    return index["transformation"]["f_t"].rsplit("/", 1)[0]
+
+
 # --- ingestion ---------------------------------------------------------------
 def test_discovery_finds_mo_file_and_retains_na_sibling(tmp_path: Path):
     _make_fixture(tmp_path)
@@ -161,7 +168,7 @@ def test_alignment_confidence_averages_the_deletion_anchor_over_thresholds(tmp_p
 def test_layout_matches_canonical_directory_grammar(tmp_path: Path):
     pr_dir = _run(tmp_path)
     sap_dir = pr_dir / SAP_FOLDER_NAME
-    fn = "functions/CombinedKey_close"
+    fn = _function_dir(sap_dir, "H-1")
     for rel in (
         "sap.json", "characterization.json", "provenance.json", "change.json",
         f"{fn}/source.before.java", f"{fn}/source.after.java", f"{fn}/target.java",
@@ -178,7 +185,7 @@ def test_layout_matches_canonical_directory_grammar(tmp_path: Path):
 
 def test_payloads_are_raw_source_files_not_escaped_json(tmp_path: Path):
     sap_dir = _run(tmp_path) / SAP_FOLDER_NAME
-    target = sap_dir / "functions/CombinedKey_close/target.java"
+    target = sap_dir / _function_dir(sap_dir, "H-1") / "target.java"
     assert target.read_text() == "class CombinedKey { }\n"
     assert (sap_dir / "hunks/H-1/hunk.diff").read_text().startswith("--- a/streams")
 
@@ -215,7 +222,40 @@ def test_every_index_payload_reference_resolves(tmp_path: Path):
 
 
 # --- function pool ------------------------------------------------------------
-def test_hunks_in_the_same_function_share_one_pool_entry(tmp_path: Path):
+def _source_with_close(hunks: int) -> str:
+    """A post-change CombinedKey whose close() holds every fixture hunk.
+
+    Each hunk's context and added line sit exactly where its ``@@`` header puts
+    them, so the patch reverts cleanly and both sides parse.
+    """
+    edits = {}
+    for n in range(1, hunks + 1):
+        edits[500 + n * 10] = f"    keep{n}();"
+        edits[501 + n * 10] = f"    added{n}();"
+    last = max(edits) + 10
+    body = [edits.get(line, "        filler();") for line in range(5, last)]
+    return "\n".join([
+        "package org.apache.kafka.streams.kstream.internals.foreignkeyjoin;",
+        "",
+        "public class CombinedKey {",
+        "    public void close() throws Exception {",
+        *body,
+        "    }",
+        "}",
+    ]) + "\n"
+
+
+def test_hunks_in_the_same_function_share_one_pool_entry(tmp_path: Path, monkeypatch):
+    """Each hunk is located on its own, and the three resolve to one close().
+
+    Sharing an entry is decided from the located method, not the section
+    heading, so the source file has to be available for the claim to be made.
+    """
+    source = _source_with_close(hunks=3)
+    monkeypatch.setattr(
+        builder, "_at_pin",
+        lambda cache_dir, pin, path: source if pin and pin.repo == "apache/kafka" else None,
+    )
     sap_dir = _run(tmp_path, hunks=3) / SAP_FOLDER_NAME
     assert [p.name for p in (sap_dir / "functions").iterdir()] == ["CombinedKey_close"]
     for hunk_id in ("H-1", "H-2", "H-3"):

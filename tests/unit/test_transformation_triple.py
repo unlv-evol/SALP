@@ -126,7 +126,8 @@ def test_a_differing_arity_falls_back_to_the_name_and_says_it_is_ambiguous():
 
 def test_no_counterpart_is_reported_rather_than_invented():
     found = locate_method(TARGET, "public void absent()", "absent", "java")
-    assert found.found and not found.has_method
+    assert not found.found and not found.has_method
+    assert found.package is not None, "the file still parsed; only the method is missing"
     assert found.diagnostics is not None and "no method corresponding" in found.diagnostics
 
 
