@@ -1,14 +1,21 @@
-"""End-to-end checks against the real GACPD sample under ``data/gacpd/``.
+"""End-to-end checks against a real GACPD sample, trimmed to what SALP reads.
 
-The sample is git-ignored, so these skip wherever it is not present. They guard
-the parsers against the formats GACPD actually emits -- CRLF endings, blank
-fields, per-threshold similarity, truncated diff section headings -- which the
-synthetic fixture can only approximate.
+The sample under ``tests/data/gacpd_sample`` is real GACPD output for two pull
+requests, plus the few repository files the pipeline reads at each pinned state.
+Those files are committed into throwaway bare repositories so that pins resolve
+and files are read exactly as against a full clone. The tests guard the parsers
+against the formats GACPD actually emits -- CRLF endings, per-threshold
+similarity, one-sided hunks -- which a synthetic fixture can only approximate.
+
+See ``tests/data/gacpd_sample/README.md`` for what was kept and how.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -17,17 +24,47 @@ from salp.config import Config
 from salp.ingest import discover_pull_requests
 from salp.packaging import validate_sap
 from salp.pipeline import run
+from salp.repos.cache import PR_REF
 from salp.structural import grammar_for
 
-DATA = Path(__file__).resolve().parents[2] / "data" / "gacpd"
+SAMPLE = Path(__file__).resolve().parents[1] / "data" / "gacpd_sample"
+DATA = SAMPLE / "gacpd"
+REPOS = SAMPLE / "repos"
 
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.skipif(
-        not DATA.is_dir() or not any(DATA.rglob("pr_results.json")),
-        reason="no GACPD sample under data/gacpd/",
-    ),
+    pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed"),
 ]
+
+# Before every cutoff and divergence date in the sample, so each target pin
+# resolves to the one snapshot commit.
+_SNAPSHOT_DATE = "2000-01-01T00:00:00Z"
+
+
+def _git(*args: str, env: dict[str, str] | None = None) -> None:
+    subprocess.run(
+        ["git", "-c", "core.autocrlf=false", *args],
+        check=True, capture_output=True, env={**os.environ, **(env or {})},
+    )
+
+
+def _build_repo_cache(cache: Path, scratch: Path) -> None:
+    """One bare repository per snapshot, with each source pull request's head ref."""
+    pull_requests = json.loads((REPOS / "pull_requests.json").read_text())
+    identity = {
+        "GIT_AUTHOR_NAME": "salp-tests", "GIT_AUTHOR_EMAIL": "salp-tests@example.invalid",
+        "GIT_COMMITTER_NAME": "salp-tests", "GIT_COMMITTER_EMAIL": "salp-tests@example.invalid",
+        "GIT_AUTHOR_DATE": _SNAPSHOT_DATE, "GIT_COMMITTER_DATE": _SNAPSHOT_DATE,
+    }
+    for snapshot in sorted(p for p in REPOS.iterdir() if p.is_dir()):
+        bare = cache / f"{snapshot.name}.git"
+        tree = ["--git-dir", str(bare), "--work-tree", str(snapshot)]
+        env = {**identity, "GIT_INDEX_FILE": str(scratch / f"{snapshot.name}.index")}
+        _git("init", "--quiet", "--bare", str(bare))
+        _git(*tree, "add", "--all", env=env)
+        _git(*tree, "commit", "--quiet", "--message", "snapshot", env=env)
+        for number in pull_requests.get(snapshot.name, []):
+            _git("--git-dir", str(bare), "update-ref", f"{PR_REF}/{number}", "HEAD")
 
 
 @pytest.fixture(scope="module")
@@ -37,12 +74,21 @@ def pull_requests():
 
 @pytest.fixture(scope="module")
 def output(tmp_path_factory) -> Path:
+    cache = tmp_path_factory.mktemp("repo-cache")
+    _build_repo_cache(cache, tmp_path_factory.mktemp("index"))
     out = tmp_path_factory.mktemp("real-run")
     cfg = Config()
     cfg.paths.gacpd_run = DATA
     cfg.paths.output = out
+    cfg.paths.repo_cache = cache
     assert run(cfg) > 0
     return out
+
+
+def _sap_dir(output: Path, file_name: str) -> Path:
+    """The SAP minted for a source file, e.g. ``MnemonicCode-java``."""
+    (sap_dir,) = output.glob(f"*/PR-*/sap-*-{file_name}")
+    return sap_dir
 
 
 # --- ingestion ----------------------------------------------------------------
@@ -53,17 +99,6 @@ def test_every_pull_request_recovers_its_repository_pair(pull_requests):
         assert m.source_repo and m.target_repo, f"PR {number} recovered no repository pair"
         assert "/" in m.source_repo and "/" in m.target_repo
         assert m.divergence_date and m.cutoff_date, f"PR {number} has no dates"
-
-
-def test_blank_pr_fields_degrade_to_none_with_a_diagnostic(pull_requests):
-    """PR 2731 leaves title and location blank; neither may swallow the next line."""
-    pr = pull_requests.get("2731")
-    if pr is None:
-        pytest.skip("PR 2731 not in the sample")
-    assert pr.metadata.title is None
-    assert pr.metadata.url is None
-    assert pr.metadata.divergence_date == "2022-09-08"
-    assert any("no title" in d for d in pr.metadata.diagnostics)
 
 
 def test_mo_files_recover_paths_and_extensions(pull_requests):
@@ -82,70 +117,39 @@ def test_scala_and_java_are_both_ingested(pull_requests):
 
 
 def test_weak_alignment_reads_as_reduced_confidence(pull_requests):
-    """The CombinedKey deletion block matches only at the coarsest threshold."""
-    pr = pull_requests.get("12535")
-    if pr is None:
-        pytest.skip("PR 12535 not in the sample")
-    (mo,) = pr.mo_files
-    assert mo.display_name == "CombinedKey.java"
-    assert mo.localization.confidence("H-1") == pytest.approx(1 / 2)
-    breakdown = mo.localization.breakdown("H-1")
+    """MnemonicCodeTest H-2's deletion block matches only at the coarser threshold."""
+    (mo,) = [m for m in pull_requests["2785"].mo_files if m.display_name == "MnemonicCodeTest.java"]
+    assert mo.localization.confidence("H-2") == pytest.approx(1 / 2)
+    breakdown = mo.localization.breakdown("H-2")
     assert breakdown["deletions"] == {50: 0.0, 40: 1.0}
     assert breakdown["additions"] == {50: 0.0, 40: 0.0}
 
 
+def test_a_pure_insertion_is_aligned_by_its_additions(pull_requests):
+    """MnemonicCode H-1 deletes nothing, so it has no deletion anchor to score."""
+    (mo,) = [m for m in pull_requests["2785"].mo_files if m.display_name == "MnemonicCode.java"]
+    assert mo.localization.breakdown("H-1")["deletions"] == {}
+    assert mo.localization.confidence("H-1") == pytest.approx(0.571429 / 4)
+
+
 # --- construction -------------------------------------------------------------
-def test_hunks_sharing_a_function_share_one_pool_entry(output):
-    """KafkaClusterTestKit edits close() three times across its five hunks."""
-    sap_dir = output / "linkedinKafka-apacheKafka" / "PR-12538" / "sap-KafkaClusterTestKit"
-    if not sap_dir.is_dir():
-        pytest.skip("PR 12538 not in the sample")
-
-    manifest = json.loads((sap_dir / "sap.json").read_text())
-    assert len(manifest["hunks"]) == 5
-    assert len(manifest["functions"]) == 3, "five hunks must collapse onto three functions"
-
-    owners = {
-        h: json.loads((sap_dir / "hunks" / h / "hunk.json").read_text())["transformation"][
-            "f_s_before"
-        ]
-        for h in manifest["hunks"]
-    }
-    assert owners["H-3"] == owners["H-4"] == owners["H-5"]
-    assert "KafkaClusterTestKit_close" in owners["H-3"]
-
-
-def test_a_truncated_section_heading_is_not_named_as_a_function(output):
-    """H-1's heading is a continuation line, so its entry stays positional."""
-    sap_dir = output / "linkedinKafka-apacheKafka" / "PR-12538" / "sap-KafkaClusterTestKit"
-    if not sap_dir.is_dir():
-        pytest.skip("PR 12538 not in the sample")
-    names = {p.name for p in (sap_dir / "functions").iterdir()}
-    assert "KafkaClusterTestKit_fn1" in names
-    assert not any("MetadataRecordSerde" in n for n in names)
-
-
-def test_pure_deletion_hunk_recovers_its_post_change_side(output):
-    """WalletFiles H-1 only deletes, so GACPD emits no full_add; the diff supplies it."""
-    sap_dir = output / "langerhansDogecoinjNew-bitcoinjBitcoinj" / "PR-2731" / "sap-WalletFiles"
-    if not sap_dir.is_dir():
-        pytest.skip("PR 2731 not in the sample")
+def test_pure_insertion_hunk_recovers_its_pre_change_side(output):
+    """MnemonicCode H-1 only adds, so GACPD emits no full_del; the diff supplies it."""
+    sap_dir = _sap_dir(output, "MnemonicCode-java")
     doc = json.loads((sap_dir / "hunks" / "H-1" / "edit_region.json").read_text())
-    post = next(e for e in doc["elements"] if e["element"].endswith("post_change_function"))
-    assert post["state"] == "PRESENT", "the omitted side must be reconstructed from the diff"
-    assert (sap_dir / post["attributes"]["payload_ref"]).is_file()
+    pre = next(e for e in doc["elements"] if e["element"].endswith("pre_change_function"))
+    assert pre["state"] == "PRESENT", "the omitted side must be reconstructed from the diff"
+    assert (sap_dir / pre["attributes"]["payload_ref"]).is_file()
 
 
 def test_an_import_region_edit_has_no_function_transformation(output):
-    """WalletFiles H-1 edits the import block, which has no enclosing function.
+    """MnemonicCode H-1 edits the import block, which has no enclosing function.
 
     tau is undefined there rather than unrecovered, so it must be NOT_APPLICABLE
     -- which leaves both denominators -- and not UNAVAILABLE, which would score
     the hunk down for evidence it structurally cannot have.
     """
-    sap_dir = output / "langerhansDogecoinjNew-bitcoinjBitcoinj" / "PR-2731" / "sap-WalletFiles"
-    if not sap_dir.is_dir():
-        pytest.skip("PR 2731 not in the sample")
+    sap_dir = _sap_dir(output, "MnemonicCode-java")
     doc = json.loads((sap_dir / "hunks" / "H-1" / "transformation.json").read_text())
     unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
     assert unit["state"] == "NOT_APPLICABLE"

@@ -1,0 +1,201 @@
+{
+    "classifiedPR": "12189",
+    "prTitle": "Fix flaky test TopicCommandIntegrationTest.testDescribeAtMinIsrPartitions(String).quorum=kraft",
+    "prDescription": "## Problem\r\nFlaky test as failed in CI https://ci-builds.apache.org/blue/organizations/jenkins/Kafka%2Fkafka-pr/detail/PR-12184/1/tests/ \r\n\r\nThe test fails because it does not wait for metadata to be propagated across brokers before killing a broker which may lead to it getting stale information. Note that a similar test was done in #12104 for a different test.\r\n\r\n## Change\r\nWait for metadata propagation to complete after killing the broker.\r\n\r\n### Committer Checklist (excluded from commit message)\r\n- [ ] Verify design and implementation \r\n- [ ] Verify test coverage and CI build status\r\n- [ ] Verify documentation (including upgrade notes)\r\n",
+    "prLocation": "https://github.com/apache/kafka/pull/12189",
+    "repoDivergenceDate": "2022-01-06T00:00:00Z",
+    "cutoffDate": "2022-07-05T23:59:59Z",
+    "addedFilesSkipped": [],
+    "renamedFiles": [],
+    "files": [
+        {
+            "fileName": "core/src/test/scala/unit/kafka/integration/KafkaServerTestHarness.scala",
+            "fileExtension": ".scala",
+            "language": "scala",
+            "isConfigurationLanguage": false,
+            "patchAvailable": true,
+            "patchStatus": "available",
+            "classification": "NA",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 20,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 20,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                }
+            ],
+            "hunks": [
+                {
+                    "classification": "NA",
+                    "number": 1,
+                    "additionsClassification": "NA",
+                    "deletionsClassification": "NA"
+                }
+            ]
+        },
+        {
+            "fileName": "core/src/test/scala/unit/kafka/server/DeleteTopicsRequestTest.scala",
+            "fileExtension": ".scala",
+            "language": "scala",
+            "isConfigurationLanguage": false,
+            "patchAvailable": true,
+            "patchStatus": "available",
+            "classification": "MO",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.scala",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_deletions.scala",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.scala",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_deletions.scala",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.scala",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_deletions.scala",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.scala",
+                    "tokenSize": 20,
+                    "similarityPercent": 28.5714,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.scala",
+                    "tokenSize": 20,
+                    "similarityPercent": 22.2222,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.scala",
+                    "tokenSize": 20,
+                    "similarityPercent": 100,
+                    "directChangeClone": true
+                },
+                {
+                    "checkName": "hunk_2_deletions.scala",
+                    "tokenSize": 20,
+                    "similarityPercent": 66.6667,
+                    "directChangeClone": true
+                }
+            ],
+            "hunks": [
+                {
+                    "classification": "MO",
+                    "number": 1,
+                    "additionsClassification": "MO",
+                    "deletionsClassification": "ED"
+                },
+                {
+                    "classification": "MO",
+                    "number": 2,
+                    "additionsClassification": "ED",
+                    "deletionsClassification": "MO"
+                }
+            ]
+        }
+    ],
+    "recommendations": "TBO"
+}

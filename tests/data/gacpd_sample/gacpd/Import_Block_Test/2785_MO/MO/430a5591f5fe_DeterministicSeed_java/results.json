@@ -1,0 +1,39 @@
+{
+    "fileName": "core/src/main/java/org/bitcoinj/wallet/DeterministicSeed.java",
+    "fileExtension": ".java",
+    "language": "java",
+    "isConfigurationLanguage": false,
+    "pr": "2785",
+    "mainline": "bitcoinj/bitcoinj",
+    "divergentRepo": "langerhans/dogecoinj-new",
+    "changeStatus": "modified",
+    "renamed": false,
+    "renamedFileName": "",
+    "patchAvailable": true,
+    "patchStatus": "available",
+    "divergentPath": "langerhans/dogecoinj-new/core/src/main/java/org/bitcoinj/wallet/DeterministicSeed.java",
+    "divergentPathType": "resolved",
+    "classification": "MO",
+    "similarityChecks": [
+        {
+            "checkName": "hunk_1_additions.java",
+            "tokenSize": 50,
+            "similarityPercent": 40,
+            "directChangeClone": true
+        },
+        {
+            "checkName": "hunk_1_deletions.java",
+            "tokenSize": 50,
+            "similarityPercent": 71.4286,
+            "directChangeClone": true
+        }
+    ],
+    "hunks": [
+        {
+            "classification": "MO",
+            "number": 1,
+            "additionsClassification": "ED",
+            "deletionsClassification": "MO"
+        }
+    ]
+}

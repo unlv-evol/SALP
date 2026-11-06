@@ -1,0 +1,3 @@
+# The root .gitignore drops any path named `core` (core dumps); the snapshot
+# repositories have real source directories by that name.
+!core

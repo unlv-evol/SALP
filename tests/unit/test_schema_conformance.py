@@ -29,6 +29,10 @@ def written(tmp_path: Path) -> Path:
     cfg = Config()
     cfg.paths.gacpd_run = tmp_path
     cfg.paths.output = tmp_path / "out"
+    # Never the default ./data/repos: a developer's local clones would otherwise
+    # resolve pins and change the SAP these tests check.
+    cfg.paths.repo_cache = tmp_path / "repo-cache"
+    cfg.resolve_pins = False
     assert run(cfg) == 1
     return cfg.paths.output
 

@@ -10,9 +10,9 @@ salp -c configs/default.yaml run
 Contents are git-ignored — real runs carry whole source trees and are far too
 large to commit. Only this README and `.gitkeep` are tracked.
 
-`tests/integration/test_real_gacpd.py` runs against whatever is here and skips
-when the directory is empty, so the sample doubles as a regression suite for the
-parsers.
+The test suite does not read this directory. `tests/integration/test_real_gacpd.py`
+runs against the committed sample in `tests/data/gacpd_sample/`, which is a
+trimmed copy of real GACPD output; see its README to extend it.
 
 ## Layout
 

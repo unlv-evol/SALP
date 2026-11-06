@@ -1,0 +1,202 @@
+{
+    "classifiedPR": "2785",
+    "prTitle": "MnemonicCode: in `toMnemonic()` throw unchecked rather than checked exception",
+    "prDescription": "When converting from entropy to mnemonic with `toMnemonic()`, a `MnemonicLengthException` was thrown for entropies with invalid length. This is bad for two reasons:\r\n\r\n- it is a checked exception, and the method will not be called with user input\r\n- misleading exception name, the error is about the entropy length not the mnemonic\r\n\r\nWe now throw a `RuntimeException` instead. The resulting simplification of calling code can be witnessed in `DeterministicSeed`.",
+    "prLocation": "https://github.com/bitcoinj/bitcoinj/pull/2785",
+    "repoDivergenceDate": "2023-02-28T00:00:00Z",
+    "cutoffDate": "2023-08-27T23:59:59Z",
+    "addedFilesSkipped": [],
+    "renamedFiles": [],
+    "files": [
+        {
+            "fileName": "core/src/main/java/org/bitcoinj/crypto/MnemonicCode.java",
+            "fileExtension": ".java",
+            "language": "java",
+            "isConfigurationLanguage": false,
+            "patchAvailable": true,
+            "patchStatus": "available",
+            "classification": "MO",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 18.1818,
+                    "directChangeClone": true
+                },
+                {
+                    "checkName": "hunk_2_deletions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 76.9231,
+                    "directChangeClone": true
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 20,
+                    "similarityPercent": 57.1429,
+                    "directChangeClone": true
+                }
+            ],
+            "hunks": [
+                {
+                    "classification": "ED",
+                    "number": 1,
+                    "additionsClassification": "ED",
+                    "deletionsClassification": "N/A"
+                },
+                {
+                    "classification": "MO",
+                    "number": 2,
+                    "additionsClassification": "ED",
+                    "deletionsClassification": "MO"
+                }
+            ]
+        },
+        {
+            "fileName": "core/src/main/java/org/bitcoinj/wallet/DeterministicSeed.java",
+            "fileExtension": ".java",
+            "language": "java",
+            "isConfigurationLanguage": false,
+            "patchAvailable": true,
+            "patchStatus": "available",
+            "classification": "MO",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 40,
+                    "directChangeClone": true
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 71.4286,
+                    "directChangeClone": true
+                }
+            ],
+            "hunks": [
+                {
+                    "classification": "MO",
+                    "number": 1,
+                    "additionsClassification": "ED",
+                    "deletionsClassification": "MO"
+                }
+            ]
+        },
+        {
+            "fileName": "core/src/test/java/org/bitcoinj/crypto/MnemonicCodeTest.java",
+            "fileExtension": ".java",
+            "language": "java",
+            "isConfigurationLanguage": false,
+            "patchAvailable": true,
+            "patchStatus": "available",
+            "classification": "MO",
+            "similarityChecks": [
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_deletions.java",
+                    "tokenSize": 50,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_additions.java",
+                    "tokenSize": 40,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_2_deletions.java",
+                    "tokenSize": 40,
+                    "similarityPercent": 100,
+                    "directChangeClone": true
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "tokenSize": 30,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_additions.java",
+                    "tokenSize": 20,
+                    "similarityPercent": 0,
+                    "directChangeClone": false
+                },
+                {
+                    "checkName": "hunk_1_deletions.java",
+                    "tokenSize": 20,
+                    "similarityPercent": 85.7143,
+                    "directChangeClone": true
+                }
+            ],
+            "hunks": [
+                {
+                    "classification": "MO",
+                    "number": 1,
+                    "additionsClassification": "MO",
+                    "deletionsClassification": "MO"
+                },
+                {
+                    "classification": "MO",
+                    "number": 2,
+                    "additionsClassification": "MO",
+                    "deletionsClassification": "MO"
+                }
+            ]
+        }
+    ],
+    "recommendations": "TBO"
+}

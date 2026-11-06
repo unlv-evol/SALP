@@ -1,0 +1,69 @@
+{
+    "fileName": "core/src/main/java/org/bitcoinj/crypto/MnemonicCode.java",
+    "fileExtension": ".java",
+    "language": "java",
+    "isConfigurationLanguage": false,
+    "pr": "2785",
+    "mainline": "bitcoinj/bitcoinj",
+    "divergentRepo": "langerhans/dogecoinj-new",
+    "changeStatus": "modified",
+    "renamed": false,
+    "renamedFileName": "",
+    "patchAvailable": true,
+    "patchStatus": "available",
+    "divergentPath": "langerhans/dogecoinj-new/core/src/main/java/org/bitcoinj/crypto/MnemonicCode.java",
+    "divergentPathType": "resolved",
+    "classification": "MO",
+    "similarityChecks": [
+        {
+            "checkName": "hunk_1_additions.java",
+            "tokenSize": 50,
+            "similarityPercent": 0,
+            "directChangeClone": false
+        },
+        {
+            "checkName": "hunk_2_additions.java",
+            "tokenSize": 50,
+            "similarityPercent": 18.1818,
+            "directChangeClone": true
+        },
+        {
+            "checkName": "hunk_2_deletions.java",
+            "tokenSize": 50,
+            "similarityPercent": 76.9231,
+            "directChangeClone": true
+        },
+        {
+            "checkName": "hunk_1_additions.java",
+            "tokenSize": 40,
+            "similarityPercent": 0,
+            "directChangeClone": false
+        },
+        {
+            "checkName": "hunk_1_additions.java",
+            "tokenSize": 30,
+            "similarityPercent": 0,
+            "directChangeClone": false
+        },
+        {
+            "checkName": "hunk_1_additions.java",
+            "tokenSize": 20,
+            "similarityPercent": 57.1429,
+            "directChangeClone": true
+        }
+    ],
+    "hunks": [
+        {
+            "classification": "ED",
+            "number": 1,
+            "additionsClassification": "ED",
+            "deletionsClassification": "N/A"
+        },
+        {
+            "classification": "MO",
+            "number": 2,
+            "additionsClassification": "ED",
+            "deletionsClassification": "MO"
+        }
+    ]
+}
