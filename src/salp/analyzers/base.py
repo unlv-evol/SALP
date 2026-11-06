@@ -51,6 +51,10 @@ class AnalysisContext:
     # regions, so analyses needing enclosing structure read these instead.
     source_file_text: str | None = None
     target_file_text: str | None = None
+    # The lines this hunk changes in ``source_file_text``, 1-based inclusive. That
+    # file is the post-change state, so this is the post-change span -- the one
+    # the function pool located this hunk's f'_s from.
+    edit_span: tuple[int, int] | None = None
     # What the function pool actually recovered for this hunk's function: which
     # members of tau are real functions and which are stand-ins. Analyzers report
     # from this rather than from the presence of a GACPD artifact, so a payload

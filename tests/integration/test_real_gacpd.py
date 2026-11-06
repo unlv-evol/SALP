@@ -177,11 +177,68 @@ def test_tau_is_three_functions_not_regions_or_files(output):
     assert checked, "no complete transformation unit was produced"
 
 
+def test_structural_evidence_describes_the_pooled_function(output):
+    """A function's structure.json must describe the method its payloads hold.
+
+    The structural analyzer once located from the pre-change header span --
+    diff context included -- against the post-change file, so a folder holding
+    `testBadEntropyLength` carried structure for `testGetWordListUnmodifiable`.
+    """
+    checked = 0
+    for path in sorted(output.glob("*/PR-*/sap-*/hunks/*/transformation.json")):
+        doc = json.loads(path.read_text())
+        unit = next(e for e in doc["elements"] if e["element"].endswith("transformation_unit"))
+        signature = (unit.get("attributes") or {}).get("signature")
+        if unit["state"] != "PRESENT" or not signature:
+            continue
+        sap_dir = path.parent.parent.parent
+        fn_dir = json.loads((path.parent / "hunk.json").read_text())["transformation"]["f_s_after"]
+        structure = json.loads((sap_dir / fn_dir.rsplit("/", 1)[0] / "structure.json").read_text())
+        source = next(
+            e for e in structure["elements"] if e["element"].endswith("source_structure")
+        )
+        assert source["attributes"]["method"] == signature, path
+        checked += 1
+    assert checked, "no hunk resolved to a pooled function"
+
+
+def test_target_structure_describes_the_pooled_target_function(output):
+    """structure.json must describe the same target method f_t holds.
+
+    Both are matched from the pre-change source method. The analyzer once
+    matched from the post-change one, which a target cannot contain yet when
+    the change edits the method's own signature.
+    """
+    checked = 0
+    for path in sorted(output.glob("*/PR-*/sap-*/hunks/*/localization.json")):
+        located = next(
+            e for e in json.loads(path.read_text())["elements"]
+            if e["element"].endswith("localized_target_function")
+        )
+        pooled = (located.get("attributes") or {}).get("method")
+        if not pooled:
+            continue
+        sap_dir = path.parent.parent.parent
+        fn_dir = json.loads((path.parent / "hunk.json").read_text())["transformation"]["f_t"]
+        structure = json.loads((sap_dir / fn_dir.rsplit("/", 1)[0] / "structure.json").read_text())
+        target = next(
+            e for e in structure["elements"] if e["element"].endswith("target_structure")
+        )
+        assert target["state"] == "PRESENT", path
+        assert target["attributes"]["method"] == pooled, path
+        checked += 1
+    assert checked, "no hunk's target resolved to a pooled function"
+
+
 def test_the_target_function_is_matched_by_signature_not_line_number(output):
     """f_t must be the counterpart of f_s, not whatever occupies the same lines.
 
     Reusing the source's line span against a diverged variant resolved `saveNow`
     to `saveNowInternal` and reported it PRESENT.
+
+    An exact match equals the signature it was matched from -- the pre-change
+    one -- not the post-change source, which differs whenever the change edits
+    the signature (MnemonicCode's toMnemonic drops a throws clause).
     """
     for path in sorted(output.glob("*/PR-*/sap-*/functions/*/structure.json")):
         elements = {
@@ -194,7 +251,7 @@ def test_the_target_function_is_matched_by_signature_not_line_number(output):
         attributes = target["attributes"]
         assert attributes["match_kind"] is not None, path
         if attributes["match_kind"] == "signature":
-            assert attributes["method"] == source["method"], path
+            assert attributes["method"] == attributes["matched_from"], path
 
 
 def test_every_sap_is_valid_and_every_reference_resolves(output):

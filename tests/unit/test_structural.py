@@ -198,3 +198,58 @@ def test_describe_outside_a_method_still_reports_file_level_context():
     meta = describe(locate(SOURCE, 3, 4, "java"), SOURCE)
     assert meta.package == "org.example.demo"
     assert meta.enclosing_class is None
+
+
+# --- target correspondence ------------------------------------------------------
+_RENAMED = """package org.example.demo;
+
+public class Widget {
+    public int count() {
+        return 2;
+    }
+}
+"""
+
+_DIVERGED = """package org.example.demo;
+
+public class Widget {
+    public int size() {
+        return 1;
+    }
+}
+"""
+
+
+def _structural(function):
+    from salp.analyzers.base import AnalysisContext
+    from salp.analyzers.structural import StructuralAnalyzer
+
+    ce = StructuralAnalyzer().investigate(AnalysisContext(
+        hunk_id="H-1", fn_id="Widget_count", source_file="Widget.java", ext="java",
+        source_file_text=_RENAMED, target_file_text=_DIVERGED, edit_span=(4, 4),
+        function=function,
+    ))
+    return next(e for e in ce.elements if e.object_type.endswith("target_structure"))
+
+
+def test_a_renamed_method_is_matched_to_the_target_from_its_pre_change_name():
+    """The change renames size() to count(); the target, not yet changed, has size().
+
+    The post-change name cannot exist in the target, so the counterpart is found
+    only from the pre-change method the function pool matched f_t from.
+    """
+    from salp.models import FunctionPayload
+
+    pooled = FunctionPayload(
+        fn_id="Widget_count", ext="java",
+        match_signature="public int size()", match_method_name="size",
+    )
+    target = _structural(pooled)
+    assert target.state.value == "PRESENT"
+    assert target.attributes["method"] == "public int size()"
+
+
+def test_without_a_pooled_match_the_post_change_method_has_no_counterpart():
+    target = _structural(None)
+    assert target.state.value == "UNAVAILABLE"
+    assert "no method corresponding" in (target.provenance.diagnostics or "")

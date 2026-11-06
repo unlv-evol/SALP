@@ -39,6 +39,11 @@ class FunctionPayload(BaseModel):
     # being read as the function it stands in for.
     signature: str | None = None
     method_name: str | None = None
+    # The source method the target was matched against. The pre-change one,
+    # since that is the state the target diverged from; it differs from
+    # `signature` when the change edits the method's own signature.
+    match_signature: str | None = None
+    match_method_name: str | None = None
     target_signature: str | None = None
     target_match_kind: str | None = None
     target_diagnostics: str | None = None

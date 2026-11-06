@@ -228,6 +228,15 @@ class ContextContainer:
     src_after: EditContext
     target: EditContext
 
+    @property
+    def anchor(self) -> EditContext:
+        """The source side the target is matched from.
+
+        The pre-change side, which is the state the target diverged from, and
+        the post-change side only when the pre-change file could not be rebuilt.
+        """
+        return self.src_before if self.src_before.found else self.src_after
+
 
 def _enclosing_function(
     text: str | None, span: tuple[int, int] | None, ext: str
@@ -340,15 +349,12 @@ def _locate_contexts(source: _HunkSource, files: _FileStates, ext: str) -> Conte
     section heading do not necessarily share an enclosing method -- the heading
     is often just the class -- so grouping before locating attributes some hunks
     to a method they are not in.
-
-    The target is matched from the pre-change side, which is the state the
-    target diverged from, and from the post-change side only when the
-    pre-change file could not be reconstructed.
     """
     before = _enclosing_function(files.source_before, source.edit_span("before"), ext)
     after = _enclosing_function(files.source_after, source.edit_span("after"), ext)
-    anchor = before if before.found else after
-    return ContextContainer(before, after, _target_context(anchor, files, ext))
+    ctxs = ContextContainer(before, after, EditContext())
+    ctxs.target = _target_context(ctxs.anchor, files, ext)
+    return ctxs
 
 
 def _build_function_pool(
@@ -407,6 +413,8 @@ def _build_function_pool(
             ext=ext,
             signature=ctxs.src_after.method_signature or ctxs.src_before.method_signature,
             method_name=ctxs.src_after.method_name or ctxs.src_before.method_name,
+            match_signature=ctxs.anchor.method_signature,
+            match_method_name=ctxs.anchor.method_name,
         )
         if not (ctxs.src_before.has_method or ctxs.src_after.has_method):
             fn.no_function_reason = _no_function_reason(
@@ -664,6 +672,7 @@ def build_sap(
             gacpd_dir=str(gf.file_dir),
             source_file_text=source_file_text,
             target_file_text=target_file_text,
+            edit_span=source.edit_span("after"),
             function=sap.functions.get(fn_id),
             extras={
                 "context_files": context_names,

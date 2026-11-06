@@ -14,6 +14,7 @@ from salp.analyzers.tools import tree_sitter_version
 from salp.models import (
     Category,
     CategoryEvidence,
+    FunctionPayload,
 )
 from salp.structural import (
     EditContext,
@@ -32,6 +33,19 @@ def _method_ast(ctx: EditContext, source: str) -> dict[str, object]:
     if ctx._method_node is None:
         return {"note": "edit region lies outside any method", "package": ctx.package}
     return to_ast_dict(ctx._method_node, source)
+
+
+def _match_identity(
+    source_ctx: EditContext, function: FunctionPayload | None
+) -> tuple[str | None, str | None]:
+    """The source signature and name the target is matched from.
+
+    The function pool's pre-change match where it made one, else the located
+    post-change method -- as for an added method, which has no pre-change side.
+    """
+    if function is not None and function.match_signature:
+        return function.match_signature, function.match_method_name
+    return source_ctx.method_signature, source_ctx.method_name
 
 
 def _correspondences(
@@ -79,13 +93,12 @@ class StructuralAnalyzer(Analyzer):
             return self.unavailable(ctx, diagnostic_for(ctx.ext))
 
         spans = ctx.extras.get("edit_region") or {}
-        before = spans.get("source_before") if isinstance(spans, dict) else None
-        source_ctx = self._locate(ctx.source_file_text, before, ctx.ext)
+        source_ctx = self._locate(ctx.source_file_text, ctx.edit_span, ctx.ext)
         # The target is found by *correspondence*, never by the source's line
         # span: a diverged variant has drifted in position, so those line numbers
         # land on whatever happens to occupy them. On the bitcoinj sample that
         # resolved `saveNow` to `saveNowInternal` and reported it as PRESENT.
-        target_ctx = self._corresponding(ctx.target_file_text, source_ctx, ctx.ext)
+        target_ctx = self._corresponding(ctx.target_file_text, source_ctx, ctx.function, ctx.ext)
 
         d = self.draft(ctx, "no file available at the pinned repository state")
         ast_ref = f"functions/{ctx.fn_id}/ast.json"
@@ -122,6 +135,10 @@ class StructuralAnalyzer(Analyzer):
                 {"payload_ref": ast_ref, "class": target_ctx.class_name,
                  "method": target_ctx.method_signature, "package": target_ctx.package,
                  "match_kind": target_ctx.match_kind,
+                 "matched_from": (
+                     _match_identity(source_ctx, ctx.function)[0]
+                     if source_ctx is not None and source_ctx.has_method else None
+                 ),
                  "diagnostics": target_ctx.diagnostics},
                 payload_ref=ast_ref,
             )
@@ -163,16 +180,25 @@ class StructuralAnalyzer(Analyzer):
         return evidence
 
     @staticmethod
-    def _locate(text: str | None, span: object, ext: str) -> EditContext | None:
-        if not text or not isinstance(span, dict):
+    def _locate(text: str | None, span: tuple[int, int] | None, ext: str) -> EditContext | None:
+        if not text or span is None:
             return None
-        return locate(text, int(span["start"]), int(span["end"]), ext)
+        return locate(text, span[0], span[1], ext)
 
     @staticmethod
     def _corresponding(
-        text: str | None, source_ctx: EditContext | None, ext: str
+        text: str | None,
+        source_ctx: EditContext | None,
+        function: FunctionPayload | None,
+        ext: str,
     ) -> EditContext | None:
         """The target-side counterpart of the source's enclosing method.
+
+        Matched from the same source method the function pool matched ``f_t``
+        from -- the pre-change one -- so the structure reported for the target
+        is the structure of the payload stored for it. ``source_ctx`` is the
+        post-change method, whose signature the target cannot have yet when the
+        change edits it.
 
         A region with no enclosing method -- an import-block edit -- has no method
         to correspond to, but the file around it still has recoverable structure.
@@ -181,7 +207,8 @@ class StructuralAnalyzer(Analyzer):
             return None
         if not source_ctx.has_method:
             return file_context(text, ext)
-        return locate_method(text, source_ctx.method_signature or "", source_ctx.method_name, ext)
+        signature, name = _match_identity(source_ctx, function)
+        return locate_method(text, signature or "", name, ext)
 
 
 @register
@@ -208,16 +235,12 @@ class SurroundingAnalyzer(Analyzer):
         else:
             d.absent("repository_context", "pull request touched no NA/ED sibling files")
 
-        spans = ctx.extras.get("edit_region") or {}
-        before = spans.get("source_before") if isinstance(spans, dict) else None
         # Only parse what an installed grammar actually covers: running one
         # language's grammar over another yields an error tree, not evidence.
-        if grammar_for(ctx.ext) is None or not (ctx.source_file_text and before):
+        if grammar_for(ctx.ext) is None or not (ctx.source_file_text and ctx.edit_span):
             return d.build()
 
-        located = locate(
-            ctx.source_file_text, int(before["start"]), int(before["end"]), ctx.ext
-        )
+        located = locate(ctx.source_file_text, *ctx.edit_span, ctx.ext)
         if not located.found:
             return d.build()
         meta = describe(located, ctx.source_file_text)
