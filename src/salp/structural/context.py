@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from salp.models import ContextType
 from salp.structural.grammars import Grammar, diagnostic_for, grammar_for
 from salp.structural.syntax import (
     control_flow_of,
@@ -51,6 +52,7 @@ class EditContext:
     _tree: Any = None
     _node: Any = None # The tree sitter node that represents the common descendent of the region
     _grammar: Grammar | None = None
+    context_type: ContextType = ContextType.WHOLE_FILE # Determines the type of the source artifact
 
     @property
     def has_method(self) -> bool:
@@ -162,6 +164,7 @@ def locate(source: str, start_line: int, end_line: int, ext: str) -> EditContext
 
     if is_import_region(source, first, last, grammar):
         ctx.is_import_region = True
+        ctx.context_type = ContextType.IMPORTS_BLOCK
         return ctx
 
     node = tree.root_node.named_descendant_for_point_range((first, 0), (last, 0))
@@ -184,10 +187,6 @@ def locate(source: str, start_line: int, end_line: int, ext: str) -> EditContext
     ctx.overlapping_methods = [
         method_signature(m, source, grammar) for m in overlapping
     ]
-    klass = enclosing_class(node if method is None else method, grammar)
-    if klass is not None:
-        name = klass.child_by_field_name("name")
-        ctx.class_name = node_text(name, source) if name is not None else None
 
     if method is not None:
         ctx._method_node = method
@@ -195,11 +194,25 @@ def locate(source: str, start_line: int, end_line: int, ext: str) -> EditContext
         ctx.method_signature = method_signature(method, source, grammar)
         ctx.method_span = (method.start_point[0] + 1, method.end_point[0] + 1)
         ctx.method_source = node_text(method, source)
+        ctx.context_type = ContextType.METHOD
     else:
         ctx.diagnostics = "edit region lies outside any method"
 
+    # Fallback: imports block -> method -> class -> whole file
+    klass = enclosing_class(node if method is None else method, grammar)
+    if klass is not None:
+        name = klass.child_by_field_name("name")
+        ctx.class_name = node_text(name, source) if name is not None else None
+        ctx.class_source = node_text(klass,source) if klass is not None else None
+        if method is None:
+            ctx.context_type = ContextType.CLASS
+
+    if method is None and klass is None:
+        ctx.context_type = ContextType.WHOLE_FILE
+
     construct = control_flow_of(node, grammar) or control_flow_of(node.parent, grammar)
     ctx.immediate_construct = construct.value if construct else None
+    
     return ctx
 
 
@@ -295,7 +308,7 @@ def locate_method(
         )
     else:
         return EditContext(
-            found=True,
+            # "found" is still not being set to true becuse we didn't find the method
             _tree=tree,
             _grammar=grammar,
             package=_package_of(tree, source, grammar),
@@ -350,7 +363,7 @@ def retrieve_class(node: Any, grammar: Grammar | None) -> str | None:
 
 def find_class_in_target(class_name: str | None, 
                          target_whole_file: str | None, 
-                         grammar: Grammar | None) -> str | None:
+                         grammar: Grammar | None) -> EditContext | None:
     """This function takes in a name string for a class, and searches all the classes
     in the target file to find the corresponding class in the target file, and returns
     the string of the class or none if not found.
@@ -362,12 +375,18 @@ def find_class_in_target(class_name: str | None,
             
         source_bytes = target_whole_file.encode("utf-8")
         
-        def traverse(node: Any) -> str | None:
+        def traverse(node: Any) -> EditContext | None:
             if node.type in grammar.class_like:
                 name_node = node.child_by_field_name('name')
                 if name_node and name_node.text and name_node.text.decode("utf-8") == class_name:
-                        return source_bytes[node.start_byte:node.end_byte].decode("utf-8")
-            
+                    class_source = source_bytes[node.start_byte:node.end_byte].decode("utf-8")
+                    return EditContext(found = True,
+                                        class_name = class_name,
+                                        class_source = class_source,
+                                        _tree = tree,
+                                        _node = node,
+                                        _grammar = grammar,
+                                        context_type = ContextType.CLASS)
             for child in node.children:
                 result = traverse(child)
                 if result is not None:

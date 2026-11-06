@@ -25,12 +25,12 @@ from salp.models import (
     SAP,
     CategoryEvidence,
     ChangeType,
+    ContextType,
     FunctionPayload,
     Hunk,
     Provenance,
     Relationship,
     RepositoryStatePin,
-    TargetType,
     TransformationUnit,
 )
 from salp.repos import grep_files, read_dependencies, read_file
@@ -41,7 +41,7 @@ from salp.structural import (
     imports_of,
     locate,
     locate_method,
-    retrieve_class,
+    parse,
 )
 
 log = get_logger(__name__)
@@ -93,21 +93,18 @@ class _HunkSource:
             self.after
         )
 
-    def edit_span(self, side: str = "") -> tuple[int,int] | None:
+    def edit_span(self, side: str) -> tuple[int, int] | None:
         """The range to locate this hunk's enclosing function from.
 
         The changed lines where the diff yields them, the whole hunk span --
         context included -- where it does not.
         """
-        before_lines, after_lines = changed_spans(diff = self.diff, header = self.header)
-        if side =="before":
-            return before_lines
-        elif side == "after":
-            return after_lines
-        else:
-            return None
-
-
+        before, after = changed_spans(self.diff, header=self.header)
+        span = before if side == "before" else after
+        if span is not None or self.header is None:
+            return span
+        h = self.header
+        return (h.old_start, h.old_end) if side == "before" else (h.new_start, h.new_end)
 
     def attach_diff(self, diff: str | None) -> None:
         """Attach the hunk's own diff, recovering either side GACPD omitted.
@@ -130,6 +127,7 @@ class _HunkSource:
         if self.header is None:
             self.header = parse_hunk_header(diff)
 
+    
     @property
     def derivation_note(self) -> str | None:
         if not self.derived:
@@ -138,18 +136,7 @@ class _HunkSource:
             f"{', '.join(self.derived)} reconstructed from the hunk diff; GACPD emitted no "
             "payload for that side because the hunk only adds or only deletes"
         )
-
-    @property
-    def group_key(self) -> str:
-        """Which function-pool entry this hunk belongs to.
-
-        Hunks reported under the same diff section heading occupy the same
-        function. A hunk with no heading -- an edit outside any function, such
-        as an import change -- groups only with itself.
-        """
-        heading = self.header.group_key() if self.header else None
-        return heading or f"\x00hunk:{self.hunk_id}"
-
+        
 
 def _with_dependencies(
     pin: RepositoryStatePin | None, deps: list[str] | None
@@ -219,32 +206,6 @@ def _at_pin(
     return read_file(cache_dir, pin, path)
 
 
-def function_ids(sources: list[_HunkSource], file_stem: str) -> dict[str, str]:
-    """Map each hunk to its function-pool identifier.
-
-    Hunks are grouped by diff section heading; the entry is named after the
-    declared function when the heading is a real declaration, and positionally
-    otherwise, so a truncated or ambiguous heading never asserts a function name
-    the evidence does not support.
-    """
-    groups: dict[str, list[_HunkSource]] = {}
-    for source in sources:
-        groups.setdefault(source.group_key, []).append(source)
-
-    assigned: dict[str, str] = {}
-    used: set[str] = set()
-    for members in groups.values():
-        first = members[0]
-        name = first.header.declared_name() if first.header else None
-        fn_id = f"{file_stem}_{_slug(name)}" if name else f"{file_stem}_fn{first.index}"
-        while fn_id in used:  # distinct functions sharing a name stay distinct
-            fn_id = f"{fn_id}_{first.index}"
-        used.add(fn_id)
-        for member in members:
-            assigned[member.hunk_id] = fn_id
-    return assigned
-
-
 @dataclass(frozen=True)
 class _FileStates:
     """The whole-file text at each state the transformation is sliced from."""
@@ -259,15 +220,29 @@ class _FileStates:
     target_whole: str | None = None
 
 
-def _enclosing_function(text: str | None, 
-                        span: tuple[int, int] | None, ext: str) -> EditContext | None:
+@dataclass
+class ContextContainer:
+    """The three contexts one hunk's transformation is cut from."""
+
+    src_before: EditContext
+    src_after: EditContext
+    target: EditContext
+
+
+def _enclosing_function(
+    text: str | None, span: tuple[int, int] | None, ext: str
+) -> EditContext:
     """The context around a hunk's edit region in a whole file, method or not."""
-    if not text or span is None or grammar_for(ext) is None:
-        return None
+    if not text:
+        return EditContext(diagnostics="no file at the pinned state; run `salp fetch-repos`")
+    if span is None:
+        return EditContext(diagnostics="could not determine the edit span")
+    if grammar_for(ext) is None:
+        return EditContext(diagnostics=NO_GRAMMAR)
     return locate(text, span[0], span[1], ext)
 
 
-def _no_function_reason(files: _FileStates, ctx: Any | None, ext: str) -> str:
+def _no_function_reason(files: _FileStates, ctx: EditContext, ext: str) -> str:
     """Why no enclosing function was found, distinguishing cannot-have from could-not-get.
 
     Two outcomes look alike and mean opposite things. A file that *parsed*, whose
@@ -282,128 +257,194 @@ def _no_function_reason(files: _FileStates, ctx: Any | None, ext: str) -> str:
         return NO_GRAMMAR
     if files.source_after is None:
         return NO_PINNED_FILE
-    if ctx is None or not ctx.found:
+    if not ctx.found:
         return NO_PARSE
     return IMPORT_REGION if ctx.is_import_region else OUTSIDE_ANY_METHOD
+
+
+def _target_context(source: EditContext, files: _FileStates, ext: str) -> EditContext:
+    """The target-side counterpart of a source context, at the finest level it exists.
+
+    A method is matched by signature, a class by name, and an import block by
+    the target's own import block. Whatever has no counterpart at its own level
+    falls back to the next coarser one, ending at the whole file, and the reason
+    the finer match failed is kept in ``diagnostics``.
+    """
+    grammar = grammar_for(ext)
+    why: str | None = None
+
+    if source.context_type is ContextType.METHOD and files.target:
+        method = locate_method(
+            files.target, source.method_signature or "", source.method_name, ext
+        )
+        if method.has_method:
+            method.context_type = ContextType.METHOD
+            return method
+        why = method.diagnostics
+
+    if source.context_type in (ContextType.METHOD, ContextType.CLASS):
+        klass = find_class_in_target(source.class_name, files.target_whole, grammar)
+        if klass is not None:
+            klass.diagnostics = why
+            return klass
+
+    if source.context_type is ContextType.IMPORTS_BLOCK and files.target_whole:
+        tree = parse(files.target_whole, grammar)
+        if tree is not None and imports_of(tree, files.target_whole, grammar):
+            return EditContext(
+                found=True, _tree=tree, _grammar=grammar,
+                context_type=ContextType.IMPORTS_BLOCK,
+            )
+
+    return EditContext(
+        context_type=ContextType.WHOLE_FILE,
+        diagnostics=why or "no finer counterpart in the target file",
+    )
+
+
+def _context_text(ctx: EditContext, text: str | None, ext: str) -> str | None:
+    """The program text a context stands for, cut from the file it was found in."""
+    match ctx.context_type:
+        case ContextType.METHOD:
+            return ctx.method_source
+        case ContextType.CLASS:
+            return ctx.class_source
+        case ContextType.IMPORTS_BLOCK:
+            if not text:
+                return None
+            grammar = grammar_for(ext)
+            tree = ctx._tree or parse(text, grammar)
+            imports = imports_of(tree, text, grammar, remove_semi_colon=False)
+            return "\n".join(imports) or None
+        case _:
+            return text
+
+
+def _context_name(ctx: EditContext) -> str | None:
+    """What a function-pool entry built from this context is named after."""
+    match ctx.context_type:
+        case ContextType.METHOD:
+            return ctx.method_name
+        case ContextType.CLASS:
+            return ctx.class_name
+        case ContextType.IMPORTS_BLOCK:
+            return "imports"
+        case _:
+            return None
+
+
+def _locate_contexts(source: _HunkSource, files: _FileStates, ext: str) -> ContextContainer:
+    """Locate one hunk's own source contexts and their target counterpart.
+
+    Every hunk is located from its own edit span. Hunks reported under one diff
+    section heading do not necessarily share an enclosing method -- the heading
+    is often just the class -- so grouping before locating attributes some hunks
+    to a method they are not in.
+
+    The target is matched from the pre-change side, which is the state the
+    target diverged from, and from the post-change side only when the
+    pre-change file could not be reconstructed.
+    """
+    before = _enclosing_function(files.source_before, source.edit_span("before"), ext)
+    after = _enclosing_function(files.source_after, source.edit_span("after"), ext)
+    anchor = before if before.found else after
+    return ContextContainer(before, after, _target_context(anchor, files, ext))
 
 
 def _build_function_pool(
     sap: SAP,
     sources: list[_HunkSource],
-    fn_ids: dict[str, str],
+    file_stem: str,
     ext: str,
     files: _FileStates,
-) -> None:
-    """Register one pool entry per distinct enclosing function.
+) -> dict[str, str]:
+    """Register one pool entry per distinct transformation, and map hunks onto them.
 
-    The transformation the specification asks for is ``tau = (f_s, f'_s, f_t)``,
-    three *functions*: the source function before and after the change, and the
-    target function before adaptation. None of the three is recoverable from the
-    GACPD artifacts alone -- ``full_del``/``full_add`` are hunk regions with diff
-    context, and ``cmp/<File>`` is a whole file -- so each is sliced out of the
-    file at its pinned repository state:
+    The transformation the specification asks for is ``tau = (f_s, f'_s, f_t)``:
+    the source unit before and after the change, and the target unit before
+    adaptation. None of the three is recoverable from the GACPD artifacts alone
+    -- ``full_del``/``full_add`` are hunk regions with diff context, and
+    ``cmp/<File>`` is a whole file -- so each is cut out of the file at its
+    pinned repository state, at the finest level that exists: the enclosing
+    method, else the import block or enclosing class, else the whole file.
 
-    * ``f'_s`` is the method enclosing the edit region in the pinned source file,
-      which sits at the pull-request head and is therefore the post-change state;
-    * ``f_s`` is the same method in that file with the patch undone;
-    * ``f_t`` is the *corresponding* method in the pinned target file, found by
-      signature rather than by the source's line span.
+    Each hunk is located on its own, but hunks resolving to the same three
+    payloads share one entry, so the pool holds every distinct unit exactly
+    once. Where a source file is unavailable the entry falls back to the GACPD
+    region and records that it did, which the required-field rule then scores
+    as partial.
 
-    Where a whole file or a grammar is unavailable, the entry falls back to the
-    GACPD region for the source sides and the whole file for the target, and
-    records that it did. The fallback is what the required-field rule then scores
-    as partial, so a degraded install stays usable without misreporting itself.
+    An edit region outside every method has no function to transform. That is
+    recorded distinctly from a failure to find one, because the two mean
+    opposite things: the first is a property of the change, the second a gap in
+    the analysis.
 
-    An edit region in the import block has no enclosing function at all. That is
-    recorded distinctly from a failure to find one, because the two mean opposite
-    things: the first is a property of the change, the second a gap in the
-    analysis.
+    Returns the function-pool identifier of every hunk.
     """
-    grouped: dict[str, list[_HunkSource]] = {}
+    assigned: dict[str, str] = {}
+    pooled: dict[tuple[str | None, str | None, str | None], str] = {}
+
     for source in sources:
-        grouped.setdefault(fn_ids[source.hunk_id], []).append(source)
+        ctxs = _locate_contexts(source, files, ext)
+        before = _context_text(ctxs.src_before, files.source_before, ext)
+        after = _context_text(ctxs.src_after, files.source_after, ext)
+        target = _context_text(ctxs.target, files.target_whole, ext)
 
-    for fn_id, members in grouped.items():
-        fn = FunctionPayload(fn_id=fn_id, ext=ext)
+        # Keyed on the payloads themselves: two hunks share an entry exactly when
+        # the entry would hold the same three files for both.
+        key = (before or source.before, after or source.after, target)
+        if (fn_id := pooled.get(key)) is not None:
+            assigned[source.hunk_id] = fn_id
+            continue
 
-        anchor = next((m for m in members if m.header), None)
-        if anchor:
-            after_ctx = _enclosing_function(files.source_after, 
-                                            anchor.edit_span("after"),ext)
-            before_ctx = _enclosing_function(files.source_before, 
-                                            anchor.edit_span("before"), ext)
-        else:
-            after_ctx = None
-            before_ctx = None
-            
-        if not ((after_ctx and after_ctx.has_method) or (before_ctx and before_ctx.has_method)):
-            fn.no_function_reason = _no_function_reason(files, after_ctx or before_ctx, ext)
+        name = _context_name(ctxs.src_after) or _context_name(ctxs.src_before)
+        fn_id = f"{file_stem}_{_slug(name)}" if name else f"{file_stem}_fn{source.index}"
+        while fn_id in sap.functions:  # distinct units sharing a name stay distinct
+            fn_id = f"{fn_id}_{source.index}"
 
-        if after_ctx is not None and after_ctx.method_source:
-            sap.add_payload(fn.source_after_ref, after_ctx.method_source)
+        fn = FunctionPayload(
+            fn_id=fn_id,
+            ext=ext,
+            signature=ctxs.src_after.method_signature or ctxs.src_before.method_signature,
+            method_name=ctxs.src_after.method_name or ctxs.src_before.method_name,
+        )
+        if not (ctxs.src_before.has_method or ctxs.src_after.has_method):
+            fn.no_function_reason = _no_function_reason(
+                files, ctxs.src_after if ctxs.src_after.found else ctxs.src_before, ext
+            )
+
+        if after is not None:
+            sap.add_payload(fn.source_after_ref, after)
             fn.has_source_after = True
-            fn.signature = after_ctx.method_signature
-            fn.method_name = after_ctx.method_name
-        elif regions := [m.after for m in members if m.after]:
-            sap.add_payload(fn.source_after_ref, "\n".join(regions))
+            fn.source_after_type = ctxs.src_after.context_type
+        elif source.after is not None:
+            sap.add_payload(fn.source_after_ref, source.after)
             fn.has_source_after = True
             fn.source_after_is_region = True
 
-        if before_ctx is not None and before_ctx.method_source:
-            sap.add_payload(fn.source_before_ref, before_ctx.method_source)
+        if before is not None:
+            sap.add_payload(fn.source_before_ref, before)
             fn.has_source_before = True
-            fn.signature = fn.signature or before_ctx.method_signature
-            fn.method_name = fn.method_name or before_ctx.method_name
-        elif regions := [m.before for m in members if m.before]:
-            sap.add_payload(fn.source_before_ref, "\n".join(regions))
+            fn.source_before_type = ctxs.src_before.context_type
+        elif source.before is not None:
+            sap.add_payload(fn.source_before_ref, source.before)
             fn.has_source_before = True
             fn.source_before_is_region = True
 
+        if target is not None:
+            sap.add_payload(fn.target_ref, target)
+            fn.has_target = True
+            fn.target_type = ctxs.target.context_type
+            fn.target_is_whole_file = ctxs.target.context_type is ContextType.WHOLE_FILE
+            fn.target_signature = ctxs.target.method_signature
+            fn.target_match_kind = ctxs.target.match_kind
+            fn.target_diagnostics = ctxs.target.diagnostics
 
-        target_ctx = locate_method(files.target, fn.signature or "", fn.method_name, ext)
-        f_t_saved = False
-        # Fallback 1: The method in the target was found. Returning it.
-        if target_ctx.method_source:
-            sap.add_payload(fn.target_ref, target_ctx.method_source)
-            fn.has_target = True
-            fn.target_signature = target_ctx.method_signature
-            fn.target_match_kind = target_ctx.match_kind
-            f_t_saved = True
-        # Fallback 2: The method was not found, but this might be because
-        # the hunk is not entirely in a method. Return the target class based
-        # on name matching with source class if possible.
-        if (not f_t_saved and after_ctx and 
-            (source_side_class_name := retrieve_class(after_ctx._node, after_ctx._grammar))
-            ):
-            target_class = find_class_in_target(source_side_class_name, 
-                                                files.target_whole, after_ctx._grammar)
-            if target_class is not None:
-                sap.add_payload(fn.target_ref, target_class)
-                fn.has_target = True
-                fn.target_type = TargetType.CLASS
-                fn.target_diagnostics = target_ctx.diagnostics
-                f_t_saved = True
-        # Fallback 3: If source has no class, it could be an import block
-        if (not f_t_saved and after_ctx and 
-            after_ctx.is_import_region and target_ctx._tree is not None and 
-            files.target_whole is not None):
-            target_imports_block = imports_of(target_ctx._tree, files.target_whole, 
-                                              grammar_for(ext), remove_semi_colon = False)
-            if target_imports_block is not None:
-                sap.add_payload(fn.target_ref, '\n'.join(target_imports_block))
-                fn.has_target = True
-                fn.target_type = TargetType.IMPORTS_BLOCK
-                fn.target_diagnostics = target_ctx.diagnostics
-                f_t_saved = True
-        # Fallback 4: Every other fallback failed, return the entire target
-        # file for f_t. This is still better than not returning anything.
-        if not f_t_saved and files.target_whole is not None:
-            sap.add_payload(fn.target_ref, files.target_whole)
-            fn.has_target = True
-            fn.target_type = TargetType.WHOLE_FILE
-            fn.target_diagnostics = target_ctx.diagnostics
-            f_t_saved = True
         sap.functions[fn_id] = fn
+        pooled[key] = fn_id
+        assigned[source.hunk_id] = fn_id
+
+    return assigned
 
 
 def _patch_slices(gf: GACPDFile, sources: list[_HunkSource]) -> dict[str, str]:
@@ -570,8 +611,7 @@ def build_sap(
     source_file_text = _at_pin(cache_dir, source_pin, gf.source_path)
     target_file_text = _at_pin(cache_dir, target_pin, gf.localization.divergent_path)
 
-    fn_ids = function_ids(sources, file_stem)
-    _build_function_pool(sap, sources, fn_ids, ext, _FileStates(
+    fn_ids = _build_function_pool(sap, sources, file_stem, ext, _FileStates(
         source_after=source_file_text,
         source_before=revert_patch(source_file_text, _read(gf.patch)),
         target=target_file_text,

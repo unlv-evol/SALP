@@ -29,12 +29,12 @@ from salp.models.evidence import (
 from salp.models.sap import (
     SAP,
     ContextFile,
+    ContextType,
     FunctionPayload,
     Hunk,
     PRGroup,
     Relationship,
     SAPReference,
-    TargetType,
     TransformationUnit,
 )
 
@@ -46,6 +46,7 @@ __all__ = [
     "CategorySpec",
     "ChangeType",
     "ContextFile",
+    "ContextType",
     "DEFAULT_SPECS",
     "ElementSpec",
     "EvidenceObject",
@@ -60,7 +61,6 @@ __all__ = [
     "RequirementLevel",
     "SAP",
     "SAPReference",
-    "TargetType",
     "TransformationUnit",
     "element_spec",
     "elements_for",

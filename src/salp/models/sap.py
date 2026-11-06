@@ -10,8 +10,8 @@ from salp.models.categories import CategoryEvidence, ChangeType
 from salp.models.evidence import Provenance
 
 
-class TargetType(Enum):
-    """Used to specify what type the target (f_t) has"""
+class ContextType(Enum):
+    """The program unit a payload holds, from finest to coarsest fallback."""
     METHOD = 1
     CLASS = 2
     WHOLE_FILE = 3
@@ -44,7 +44,11 @@ class FunctionPayload(BaseModel):
     target_diagnostics: str | None = None
     source_before_is_region: bool = False
     source_after_is_region: bool = False
-    target_type: TargetType = TargetType.METHOD
+    # A payload may now be a class, import block, or whole file rather than a
+    # method; only a METHOD payload counts as a recovered function.
+    source_before_type: ContextType = ContextType.METHOD
+    source_after_type: ContextType = ContextType.METHOD
+    target_type: ContextType = ContextType.METHOD
     target_is_whole_file: bool = False
     # Why no enclosing function was found, when none was. Set from the reason
     # constants in `packaging.builder`.
@@ -62,15 +66,23 @@ class FunctionPayload(BaseModel):
 
     @property
     def has_source_before_function(self) -> bool:
-        return self.has_source_before and not self.source_before_is_region
+        return (
+            self.has_source_before
+            and not self.source_before_is_region
+            and self.source_before_type == ContextType.METHOD
+        )
 
     @property
     def has_source_after_function(self) -> bool:
-        return self.has_source_after and not self.source_after_is_region
+        return (
+            self.has_source_after
+            and not self.source_after_is_region
+            and self.source_after_type == ContextType.METHOD
+        )
 
     @property
     def has_target_function(self) -> bool:
-        return self.has_target and self.target_type == TargetType.METHOD
+        return self.has_target and self.target_type == ContextType.METHOD
 
     @property
     def dir_ref(self) -> str:
