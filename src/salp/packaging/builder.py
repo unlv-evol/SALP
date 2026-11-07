@@ -38,7 +38,7 @@ from salp.structural import (
     EditContext,
     find_class_in_target,
     grammar_for,
-    imports_of,
+    import_block,
     locate,
     locate_method,
     parse,
@@ -299,9 +299,9 @@ def _target_context(source: EditContext, files: _FileStates, ext: str) -> EditCo
 
     if source.context_type is ContextType.IMPORTS_BLOCK and files.target_whole:
         tree = parse(files.target_whole, grammar)
-        if tree is not None and imports_of(tree, files.target_whole, grammar):
+        if block := import_block(tree, files.target_whole, grammar):
             return EditContext(
-                found=True, _tree=tree, _grammar=grammar,
+                found=True, _tree=tree, _grammar=grammar, imports_source=block,
                 context_type=ContextType.IMPORTS_BLOCK,
             )
 
@@ -311,7 +311,7 @@ def _target_context(source: EditContext, files: _FileStates, ext: str) -> EditCo
     )
 
 
-def _context_text(ctx: EditContext, text: str | None, ext: str) -> str | None:
+def _context_text(ctx: EditContext, text: str | None) -> str | None:
     """The program text a context stands for, cut from the file it was found in."""
     match ctx.context_type:
         case ContextType.METHOD:
@@ -319,12 +319,7 @@ def _context_text(ctx: EditContext, text: str | None, ext: str) -> str | None:
         case ContextType.CLASS:
             return ctx.class_source
         case ContextType.IMPORTS_BLOCK:
-            if not text:
-                return None
-            grammar = grammar_for(ext)
-            tree = ctx._tree or parse(text, grammar)
-            imports = imports_of(tree, text, grammar, remove_semi_colon=False)
-            return "\n".join(imports) or None
+            return ctx.imports_source
         case _:
             return text
 
@@ -392,9 +387,9 @@ def _build_function_pool(
 
     for source in sources:
         ctxs = _locate_contexts(source, files, ext)
-        before = _context_text(ctxs.src_before, files.source_before, ext)
-        after = _context_text(ctxs.src_after, files.source_after, ext)
-        target = _context_text(ctxs.target, files.target_whole, ext)
+        before = _context_text(ctxs.src_before, files.source_before)
+        after = _context_text(ctxs.src_after, files.source_after)
+        target = _context_text(ctxs.target, files.target_whole)
 
         # Keyed on the payloads themselves: two hunks share an entry exactly when
         # the entry would hold the same three files for both.

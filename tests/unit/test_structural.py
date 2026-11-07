@@ -253,3 +253,70 @@ def test_without_a_pooled_match_the_post_change_method_has_no_counterpart():
     target = _structural(None)
     assert target.state.value == "UNAVAILABLE"
     assert "no method corresponding" in (target.provenance.diagnostics or "")
+
+
+# --- verbatim payload slices --------------------------------------------------
+_GROUPED_IMPORTS = """package a.b;
+
+import java.io.File;
+import java.util.List;
+
+// fork-only
+import kafka.X;
+
+public class C {
+    void m() {}
+}"""
+
+
+def test_the_import_block_is_cut_verbatim_with_its_blank_lines_and_comments():
+    """A consumer locates the block by its text, so every byte between groups counts."""
+    from salp.structural import import_block
+
+    block = import_block(parse(_GROUPED_IMPORTS, JAVA), _GROUPED_IMPORTS, JAVA)
+    assert block == (
+        "import java.io.File;\nimport java.util.List;\n\n// fork-only\nimport kafka.X;\n"
+    )
+    assert _GROUPED_IMPORTS.count(block) == 1
+
+
+def test_imports_inside_a_scala_object_are_not_part_of_the_file_import_block():
+    """A slice reaching a nested import would take the object body with it."""
+    from salp.structural import SCALA, import_block
+
+    source = "package p\n\nimport a.B\nimport c.D\n\nobject X {\n  import e.F\n}\n"
+    assert import_block(parse(source, SCALA), source, SCALA) == "import a.B\nimport c.D\n"
+
+
+def test_the_import_run_touching_the_edit_is_the_one_cut():
+    from salp.structural import SCALA, import_block
+
+    source = "package p\nimport a.B\n\npackage q\nimport c.D\nimport e.F\n"
+    tree = parse(source, SCALA)
+    assert import_block(tree, source, SCALA) == "import a.B\n"
+    assert import_block(tree, source, SCALA, (4, 4)) == "import c.D\nimport e.F\n"
+
+
+def test_a_class_payload_is_whole_lines_through_its_final_newline():
+    """A region splice refuses a region whose last line has no newline."""
+    from salp.structural import find_class_in_target
+
+    target = "package a;\n\npublic class C {\n    void m() {}\n}\n\nclass D {}\n"
+    found = find_class_in_target("C", target, JAVA)
+    assert found is not None
+    assert found.class_source == "public class C {\n    void m() {}\n}\n"
+    assert target.count(found.class_source) == 1
+
+
+def test_a_located_class_payload_is_whole_lines_too():
+    ctx = locate(_GROUPED_IMPORTS + "\n", 9, 9, "java")
+    assert ctx.class_source == "public class C {\n    void m() {}\n}\n"
+
+
+def test_a_slice_at_the_end_of_a_file_without_a_final_newline_stays_verbatim():
+    """Nothing is invented: the file's last line has no terminator to include."""
+    from salp.structural import find_class_in_target
+
+    found = find_class_in_target("C", _GROUPED_IMPORTS, JAVA)
+    assert found is not None
+    assert found.class_source == "public class C {\n    void m() {}\n}"

@@ -77,6 +77,9 @@ class Grammar:
     import_declaration: str
     # Line prefixes that make a line part of the import preamble.
     import_prefixes: tuple[str, ...]
+    # Comment nodes, which may sit between file-level imports without ending
+    # the import block.
+    comment: frozenset[str]
     if_node: str
     else_token: str
     block: str
@@ -119,6 +122,7 @@ JAVA = Grammar(
     package_name=("scoped_identifier", "identifier"),
     import_declaration="import_declaration",
     import_prefixes=("import", "package"),
+    comment=frozenset({"line_comment", "block_comment"}),
     if_node="if_statement",
     else_token="else",
     block="block",
@@ -167,6 +171,7 @@ SCALA = Grammar(
     package_name=("package_identifier", "identifier"),
     import_declaration="import_declaration",
     import_prefixes=("import", "package"),
+    comment=frozenset({"comment", "block_comment"}),
     if_node="if_expression",
     else_token="else",
     block="block",

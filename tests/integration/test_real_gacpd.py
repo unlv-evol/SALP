@@ -156,6 +156,26 @@ def test_an_import_region_edit_has_no_function_transformation(output):
     assert "import block" in unit["provenance"]["diagnostics"]
 
 
+def test_every_target_payload_occurs_verbatim_in_the_fork_file(output):
+    """RCAP replaces f_t by finding its exact text in the fork.
+
+    An import block rebuilt from its import nodes lost the blank lines between
+    groups, so it occurred nowhere in the fork and every unit needing it failed.
+    """
+    checked = 0
+    for sap_dir in sorted(output.glob("*/PR-*/sap-*")):
+        target_repo = json.loads((sap_dir.parent / "pr.json").read_text())["target_repo"]
+        target_file = json.loads((sap_dir / "sap.json").read_text())["target_file"]
+        fork = (REPOS / target_repo.replace("/", "__") / target_file).read_text(encoding="utf-8")
+        for payload in sorted(sap_dir.glob("functions/*/target.*")):
+            text = payload.read_text(encoding="utf-8")
+            assert fork.count(text) == 1, payload
+            if payload.parent.name.endswith("_imports"):
+                assert text.endswith("\n"), f"{payload}: a block is whole lines"
+            checked += 1
+    assert checked, "no target payload was written"
+
+
 def test_tau_is_three_functions_not_regions_or_files(output):
     """Every member of a recovered tau must be a function body.
 

@@ -31,11 +31,13 @@ __all__ = [
     "is_in_method",
     "method_name",
     "method_signature",
+    "node_lines",
     "node_text",
     "parameter_type",
     "parse",
     "query",
     "sort_by_position",
+    "whole_lines",
 ]
 
 
@@ -49,6 +51,27 @@ def node_text(node: Any, source: str) -> str:
     if node is None:
         return ""
     return source.encode("utf-8")[node.start_byte : node.end_byte].decode("utf-8", "replace")
+
+
+def whole_lines(source: str, start_byte: int, end_byte: int) -> str:
+    """The full lines a byte range touches, through the last line's terminator.
+
+    A consumer that splices by line cannot place text that starts mid-line or
+    ends before its newline, and one that matches by text needs the exact
+    bytes. Widening to whole lines satisfies both: the result is still a
+    verbatim substring of the file.
+    """
+    data = source.encode("utf-8")
+    start = data.rfind(b"\n", 0, start_byte) + 1
+    end = data.find(b"\n", end_byte)
+    return data[start : len(data) if end == -1 else end + 1].decode("utf-8", "replace")
+
+
+def node_lines(node: Any, source: str) -> str:
+    """The whole lines a node spans; see ``whole_lines``."""
+    if node is None:
+        return ""
+    return whole_lines(source, node.start_byte, node.end_byte)
 
 
 def sort_by_position(nodes: list[Any]) -> list[Any]:

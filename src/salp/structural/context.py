@@ -20,10 +20,12 @@ from salp.structural.syntax import (
     is_import_region,
     method_name,
     method_signature,
+    node_lines,
     node_text,
     parse,
     query,
     sort_by_position,
+    whole_lines,
 )
 
 
@@ -37,6 +39,7 @@ class EditContext:
     imports: list[str] = field(default_factory=list)
     class_name: str | None = None
     class_source: str | None = None
+    imports_source: str | None = None
     method_name: str | None = None
     method_signature: str | None = None
     method_span: tuple[int, int] | None = None
@@ -97,6 +100,46 @@ def imports_of(tree: Any, source: str, grammar: Grammar | None,
          if remove_semi_colon else node_text(n, source).strip())
         for n in sort_by_position(captures.get("i", []))
     ]
+
+
+def import_block(
+    tree: Any, source: str, grammar: Grammar | None, lines: tuple[int, int] | None = None
+) -> str | None:
+    """A file's import block, verbatim, as it would be found in the file.
+
+    The whole lines from the first import of a run to its last, so the blank
+    lines and comments between import groups are kept: a consumer that locates
+    the block by its text needs every byte. Rebuilding it from the import nodes
+    drops those lines, and the result then occurs nowhere in the file.
+
+    Only file-level imports form the block. Scala also allows imports inside a
+    class or object; a slice reaching those would take the whole body with it.
+    A file can hold several runs -- Scala lets imports follow later package
+    clauses -- so ``lines``, a 0-based inclusive range, picks the run it touches,
+    and the first run is used when none does.
+    """
+    if tree is None or grammar is None:
+        return None
+    runs: list[list[Any]] = []
+    run: list[Any] = []
+    for child in tree.root_node.named_children:
+        if child.type == grammar.import_declaration:
+            run.append(child)
+        elif child.type not in grammar.comment and run:
+            runs.append(run)
+            run = []
+    if run:
+        runs.append(run)
+    if not runs:
+        return None
+    chosen = runs[0]
+    if lines is not None:
+        first, last = lines
+        chosen = next(
+            (r for r in runs if r[0].start_point[0] <= last and first <= r[-1].end_point[0]),
+            chosen,
+        )
+    return whole_lines(source, chosen[0].start_byte, chosen[-1].end_byte)
 
 
 def imported_class_names(tree: Any, source: str, grammar: Grammar | None) -> list[str]:
@@ -165,6 +208,7 @@ def locate(source: str, start_line: int, end_line: int, ext: str) -> EditContext
     if is_import_region(source, first, last, grammar):
         ctx.is_import_region = True
         ctx.context_type = ContextType.IMPORTS_BLOCK
+        ctx.imports_source = import_block(tree, source, grammar, (first, last))
         return ctx
 
     node = tree.root_node.named_descendant_for_point_range((first, 0), (last, 0))
@@ -203,7 +247,7 @@ def locate(source: str, start_line: int, end_line: int, ext: str) -> EditContext
     if klass is not None:
         name = klass.child_by_field_name("name")
         ctx.class_name = node_text(name, source) if name is not None else None
-        ctx.class_source = node_text(klass,source) if klass is not None else None
+        ctx.class_source = node_lines(klass, source)
         if method is None:
             ctx.context_type = ContextType.CLASS
 
@@ -373,16 +417,13 @@ def find_class_in_target(class_name: str | None,
         if not tree:
             return None
             
-        source_bytes = target_whole_file.encode("utf-8")
-        
         def traverse(node: Any) -> EditContext | None:
             if node.type in grammar.class_like:
                 name_node = node.child_by_field_name('name')
                 if name_node and name_node.text and name_node.text.decode("utf-8") == class_name:
-                    class_source = source_bytes[node.start_byte:node.end_byte].decode("utf-8")
                     return EditContext(found = True,
                                         class_name = class_name,
-                                        class_source = class_source,
+                                        class_source = node_lines(node, target_whole_file),
                                         _tree = tree,
                                         _node = node,
                                         _grammar = grammar,
