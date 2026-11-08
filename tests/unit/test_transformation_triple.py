@@ -20,6 +20,7 @@ from salp.structural import (
     MATCH_NAME_ARITY,
     TREE_SITTER_AVAILABLE,
     file_context,
+    locate,
     locate_method,
 )
 
@@ -209,3 +210,89 @@ def test_a_file_that_disagrees_with_the_diff_is_not_cut():
     before, after, cut_from = _regions_for(_REGION_DIFF, _BEFORE_FILE, drifted)
     assert cut_from == "diff"
     assert after == "    void a() {\n\n        neu();\n    }\n"
+
+
+# --- which source method the target is matched from ---------------------------
+# A revert that folds an extracted helper back into its caller: the deleted lines
+# sit in the helper, which the fork never had; the added ones in the caller, which
+# it has.
+_FOLDED_BEFORE = """class TaskManager {
+    void handleLostAll() {
+        closeDirty();
+    }
+
+    private void closeDirty() {
+        close();
+        reinit();
+    }
+}
+"""
+_FOLDED_AFTER = """class TaskManager {
+    void handleLostAll() {
+        close();
+        reinit();
+    }
+}
+"""
+_FORK = """class TaskManager {
+    void handleLostAll() {
+        close();
+    }
+
+    void handleRevocation() {
+        revoke();
+    }
+}
+"""
+
+
+def _target_for(edits_before: bool, edits_after: bool):
+    from salp.packaging.builder import ContextContainer, _FileStates, _target_context
+    from salp.structural import EditContext
+
+    ctxs = ContextContainer(
+        locate(_FOLDED_BEFORE, 8, 8, "java"),  # reinit(); in closeDirty()
+        locate(_FOLDED_AFTER, 4, 4, "java"),   # reinit(); in handleLostAll()
+        EditContext(),
+        edits_before,
+        edits_after,
+    )
+    files = _FileStates(
+        source_before=_FOLDED_BEFORE, source_after=_FOLDED_AFTER,
+        target=_FORK, target_whole=_FORK,
+    )
+    return _target_context(ctxs, files, "java")
+
+
+def test_the_post_change_method_is_tried_when_the_pre_change_one_is_not_in_the_fork():
+    target, matched = _target_for(edits_before=True, edits_after=True)
+    assert target.method_name == "handleLostAll"
+    assert matched is not None and matched.method_name == "handleLostAll"
+
+
+def test_a_side_that_only_marks_where_lines_went_is_never_matched():
+    """With nothing added, the post-change method only neighbours the change."""
+    target, matched = _target_for(edits_before=True, edits_after=False)
+    assert target.method_name is None and target.class_name == "TaskManager"
+    assert matched is None
+
+
+def test_the_pre_change_method_wins_when_both_exist_in_the_fork():
+    from salp.packaging.builder import ContextContainer, _FileStates, _target_context
+    from salp.structural import EditContext
+
+    ctxs = ContextContainer(
+        locate(_FORK, 3, 3, "java"), locate(_FORK, 7, 7, "java"), EditContext(), True, True,
+    )
+    files = _FileStates(source_before=_FORK, source_after=_FORK, target=_FORK, target_whole=_FORK)
+    target, matched = _target_context(ctxs, files, "java")
+    assert target.method_name == matched.method_name == "handleLostAll"
+
+
+def test_edited_sides_reads_which_sides_a_hunk_changes():
+    from salp.ingest import edited_sides
+
+    assert edited_sides("@@ -1,2 +1,1 @@\n a();\n-b();\n") == (True, False)
+    assert edited_sides("@@ -1,1 +1,2 @@\n a();\n+b();\n") == (False, True)
+    assert edited_sides("@@ -1,1 +1,1 @@\n-a();\n+b();\n") == (True, True)
+    assert edited_sides(None) == (True, True), "unknown is not evidence of no edit"

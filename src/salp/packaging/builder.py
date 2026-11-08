@@ -15,6 +15,7 @@ from salp.ingest import (
     HunkArtifacts,
     HunkHeader,
     changed_spans,
+    edited_sides,
     hunk_region,
     hunk_side,
     parse_hunk_header,
@@ -228,15 +229,46 @@ class ContextContainer:
     src_before: EditContext
     src_after: EditContext
     target: EditContext
+    # Whether the hunk changes lines on each side, or only marks a point there.
+    edits_before: bool = True
+    edits_after: bool = True
+    # The source side whose method was found in the target, when one was.
+    matched: EditContext | None = None
 
     @property
     def anchor(self) -> EditContext:
-        """The source side the target is matched from.
+        """The source side a coarser target -- class, import block -- is found from.
 
         The pre-change side, which is the state the target diverged from, and
         the post-change side only when the pre-change file could not be rebuilt.
         """
         return self.src_before if self.src_before.found else self.src_after
+
+    @property
+    def method_sides(self) -> list[EditContext]:
+        """The source methods to look for in the target, in the order to try them.
+
+        The pre-change method first, being the state the target diverged from.
+        But that method need not exist there: a change that restructures code
+        -- a revert, a split, an extraction -- edits lines of a method the fork
+        never had, while the method the lines end up in is one it does have.
+        So the post-change method is tried next, before giving up on a method.
+
+        A side counts only where the hunk changes lines on it. A pure deletion's
+        post-change side, or a pure insertion's pre-change side, is just the
+        point the lines left or arrived at, and the method beside that point is
+        a neighbour of the change, not its subject.
+        """
+        candidates = ((self.src_before, self.edits_before), (self.src_after, self.edits_after))
+        sides = [side for side, edited in candidates if edited and side.has_method]
+        if len(sides) == 2 and sides[0].method_signature == sides[1].method_signature:
+            return sides[:1]
+        return sides
+
+    @property
+    def match_source(self) -> EditContext:
+        """The source side the target corresponds to."""
+        return self.matched or self.anchor
 
 
 def _enclosing_function(
@@ -272,31 +304,36 @@ def _no_function_reason(files: _FileStates, ctx: EditContext, ext: str) -> str:
     return IMPORT_REGION if ctx.is_import_region else OUTSIDE_ANY_METHOD
 
 
-def _target_context(source: EditContext, files: _FileStates, ext: str) -> EditContext:
-    """The target-side counterpart of a source context, at the finest level it exists.
+def _target_context(
+    ctxs: ContextContainer, files: _FileStates, ext: str
+) -> tuple[EditContext, EditContext | None]:
+    """The target-side counterpart of a hunk, at the finest level it exists.
 
-    A method is matched by signature, a class by name, and an import block by
-    the target's own import block. Whatever has no counterpart at its own level
-    falls back to the next coarser one, ending at the whole file, and the reason
-    the finer match failed is kept in ``diagnostics``.
+    A method is matched by signature, trying each source side's method in turn,
+    then a class by name, then an import block by the target's own block.
+    Whatever has no counterpart at its own level falls back to the next coarser
+    one, ending at the whole file, and the reason the finer match failed is
+    kept in ``diagnostics``.
+
+    Returns the target and the source side whose method it matched, if any.
     """
     grammar = grammar_for(ext)
     why: str | None = None
 
-    if source.context_type is ContextType.METHOD and files.target:
-        method = locate_method(
-            files.target, source.method_signature or "", source.method_name, ext
-        )
+    for side in ctxs.method_sides if files.target else []:
+        method = locate_method(files.target, side.method_signature or "", side.method_name, ext)
         if method.has_method:
             method.context_type = ContextType.METHOD
-            return method
-        why = method.diagnostics
+            return method, side
+        why = why or method.diagnostics
+
+    source = ctxs.anchor
 
     if source.context_type in (ContextType.METHOD, ContextType.CLASS):
         klass = find_class_in_target(source.class_name, files.target_whole, grammar)
         if klass is not None:
             klass.diagnostics = why
-            return klass
+            return klass, None
 
     if source.context_type is ContextType.IMPORTS_BLOCK and files.target_whole:
         tree = parse(files.target_whole, grammar)
@@ -304,12 +341,12 @@ def _target_context(source: EditContext, files: _FileStates, ext: str) -> EditCo
             return EditContext(
                 found=True, _tree=tree, _grammar=grammar, imports_source=block,
                 context_type=ContextType.IMPORTS_BLOCK,
-            )
+            ), None
 
     return EditContext(
         context_type=ContextType.WHOLE_FILE,
         diagnostics=why or "no finer counterpart in the target file",
-    )
+    ), None
 
 
 def _context_text(ctx: EditContext, text: str | None) -> str | None:
@@ -348,8 +385,9 @@ def _locate_contexts(source: _HunkSource, files: _FileStates, ext: str) -> Conte
     """
     before = _enclosing_function(files.source_before, source.edit_span("before"), ext)
     after = _enclosing_function(files.source_after, source.edit_span("after"), ext)
-    ctxs = ContextContainer(before, after, EditContext())
-    ctxs.target = _target_context(ctxs.anchor, files, ext)
+    edits_before, edits_after = edited_sides(source.diff, header=source.header)
+    ctxs = ContextContainer(before, after, EditContext(), edits_before, edits_after)
+    ctxs.target, ctxs.matched = _target_context(ctxs, files, ext)
     return ctxs
 
 
@@ -409,8 +447,8 @@ def _build_function_pool(
             ext=ext,
             signature=ctxs.src_after.method_signature or ctxs.src_before.method_signature,
             method_name=ctxs.src_after.method_name or ctxs.src_before.method_name,
-            match_signature=ctxs.anchor.method_signature,
-            match_method_name=ctxs.anchor.method_name,
+            match_signature=ctxs.match_source.method_signature,
+            match_method_name=ctxs.match_source.method_name,
         )
         if not (ctxs.src_before.has_method or ctxs.src_after.has_method):
             fn.no_function_reason = _no_function_reason(

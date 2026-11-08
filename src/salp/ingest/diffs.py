@@ -258,6 +258,21 @@ def changed_spans(
     )
 
 
+def edited_sides(diff: str | None, *, header: HunkHeader | None = None) -> tuple[bool, bool]:
+    """Whether a hunk deletes lines, and whether it adds lines.
+
+    A side with no changed line still has a span -- the point where the other
+    side's lines were inserted or removed -- but that point only marks a
+    position. Whatever encloses it says where the change happened, not what it
+    changed. Without a body to read, both sides are assumed edited.
+    """
+    found = _hunk_body(diff, header) if diff else None
+    if found is None:
+        return True, True
+    lines = found[1].splitlines()
+    return any(line.startswith("-") for line in lines), any(line.startswith("+") for line in lines)
+
+
 def hunk_region(
     diff: str | None, *, side: str, header: HunkHeader | None = None
 ) -> str | None:

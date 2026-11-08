@@ -7,6 +7,7 @@ emits, and unified-diff parsing for its hunk artifacts.
 from salp.ingest.diffs import (
     HunkHeader,
     changed_spans,
+    edited_sides,
     hunk_region,
     hunk_side,
     parse_hunk_header,
@@ -40,6 +41,7 @@ __all__ = [
     "LocalizationFacts",
     "PullRequestMetadata",
     "changed_spans",
+    "edited_sides",
     "hunk_region",
     "discover_api_files",
     "discover_pull_requests",
