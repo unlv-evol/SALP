@@ -137,6 +137,7 @@ def test_compatibility_on_an_unparseable_language_is_unavailable():
     assert "kt" in ce.elements[0].provenance.diagnostics
 
 
+@pytestmark_ts
 def test_compatibility_reads_scala_imports():
     """Scala is parsed by its own grammar, not skipped and not read as Java."""
     source = "package p\nimport a.b.Widget\nobject X { def m(): Unit = Widget.go() }\n"

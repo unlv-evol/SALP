@@ -9,10 +9,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import salp.packaging.builder as builder
 from salp.config import Config
 from salp.ingest import discover_pull_requests
 from salp.pipeline import run
+from salp.structural import TREE_SITTER_AVAILABLE
 
 # Updated to match the paths specified in the new JSON results
 SRC_PATH = (
@@ -245,6 +248,7 @@ def _source_with_close(hunks: int) -> str:
     ]) + "\n"
 
 
+@pytest.mark.skipif(not TREE_SITTER_AVAILABLE, reason="tree-sitter not installed")
 def test_hunks_in_the_same_function_share_one_pool_entry(tmp_path: Path, monkeypatch):
     """Each hunk is located on its own, and the three resolve to one close().
 

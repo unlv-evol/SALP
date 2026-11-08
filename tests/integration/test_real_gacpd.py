@@ -25,7 +25,7 @@ from salp.ingest import discover_pull_requests
 from salp.packaging import validate_sap
 from salp.pipeline import run
 from salp.repos.cache import PR_REF
-from salp.structural import grammar_for
+from salp.structural import TREE_SITTER_AVAILABLE, grammar_for
 
 SAMPLE = Path(__file__).resolve().parents[1] / "data" / "gacpd_sample"
 DATA = SAMPLE / "gacpd"
@@ -35,6 +35,13 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed"),
 ]
+
+# For what only a parser can recover: methods, classes, grammar-level structure.
+# Everything else here runs without the `structural` extra, exercising the
+# degraded path SALP supports.
+requires_parser = pytest.mark.skipif(
+    not TREE_SITTER_AVAILABLE, reason="tree-sitter not installed"
+)
 
 # Before every cutoff and divergence date in the sample, so each target pin
 # resolves to the one snapshot commit.
@@ -142,6 +149,7 @@ def test_pure_insertion_hunk_recovers_its_pre_change_side(output):
     assert (sap_dir / pre["attributes"]["payload_ref"]).is_file()
 
 
+@requires_parser
 def test_an_import_region_edit_has_no_function_transformation(output):
     """MnemonicCode H-1 edits the import block, which has no enclosing function.
 
@@ -209,6 +217,7 @@ def test_every_hunk_carries_its_region_as_an_exact_slice_of_the_file(output):
     assert checked, "no hunk was written"
 
 
+@requires_parser
 def test_tau_is_three_functions_not_regions_or_files(output):
     """Every member of a recovered tau must be a function body.
 
@@ -234,6 +243,7 @@ def test_tau_is_three_functions_not_regions_or_files(output):
     assert checked, "no complete transformation unit was produced"
 
 
+@requires_parser
 def test_structural_evidence_describes_the_pooled_function(output):
     """A function's structure.json must describe the method its payloads hold.
 
@@ -259,6 +269,7 @@ def test_structural_evidence_describes_the_pooled_function(output):
     assert checked, "no hunk resolved to a pooled function"
 
 
+@requires_parser
 def test_target_structure_describes_the_pooled_target_function(output):
     """structure.json must describe the same target method f_t holds.
 
@@ -348,6 +359,7 @@ def test_context_files_referenced_by_the_manifest_exist(output):
 
 
 # --- characterization ---------------------------------------------------------
+@requires_parser
 def test_enrichment_raises_readiness_for_parseable_files(output):
     """With structure, compatibility, and verification recovered, SAPs reach High.
 
@@ -381,6 +393,7 @@ def test_enrichment_raises_readiness_for_parseable_files(output):
         assert levels[profile["aggregate"]["readiness"]] < levels["HIGH"], name
 
 
+@requires_parser
 def test_scala_is_parsed_by_its_own_grammar(output):
     """The Scala SAPs must carry real structural evidence, not an explicit gap.
 
@@ -412,6 +425,7 @@ def test_scala_is_parsed_by_its_own_grammar(output):
     assert named, "no Scala method signature was recovered"
 
 
+@requires_parser
 def test_foundational_categories_are_complete_everywhere(output):
     """Java SAPs must carry complete foundational evidence.
 

@@ -24,7 +24,11 @@ from salp.structural import (
     locate_method,
 )
 
-pytestmark = pytest.mark.skipif(not TREE_SITTER_AVAILABLE, reason="tree-sitter not installed")
+# Only tests that parse need the `structural` extra; the diff and region tests
+# run without it, which is the environment they matter most in.
+requires_parser = pytest.mark.skipif(
+    not TREE_SITTER_AVAILABLE, reason="tree-sitter not installed"
+)
 
 
 AFTER = """package org.example;
@@ -99,6 +103,7 @@ public class Widget {
 """
 
 
+@requires_parser
 def test_an_exact_signature_match_is_reported_as_such():
     found = locate_method(TARGET, "public int size(String)", "size", "java")
     assert found.match_kind == MATCH_EXACT
@@ -106,18 +111,21 @@ def test_an_exact_signature_match_is_reported_as_such():
     assert "return name.length() + 1;" in found.method_source
 
 
+@requires_parser
 def test_the_counterpart_is_not_whatever_occupies_the_same_lines():
     """`reset` sits where `size` does in the source; position must not decide."""
     found = locate_method(TARGET, "public int size(String)", "size", "java")
     assert found.method_name == "size"
 
 
+@requires_parser
 def test_a_differing_signature_falls_back_to_name_and_arity():
     found = locate_method(TARGET, "protected int size(CharSequence)", "size", "java")
     assert found.match_kind == MATCH_NAME_ARITY
     assert found.diagnostics is not None and "name and parameter count" in found.diagnostics
 
 
+@requires_parser
 def test_a_differing_arity_falls_back_to_the_name_and_says_it_is_ambiguous():
     found = locate_method(TARGET, "public int size(String, int, int)", "size", "java")
     assert found.match_kind == MATCH_NAME
@@ -125,6 +133,7 @@ def test_a_differing_arity_falls_back_to_the_name_and_says_it_is_ambiguous():
     assert "candidates" in found.diagnostics
 
 
+@requires_parser
 def test_no_counterpart_is_reported_rather_than_invented():
     found = locate_method(TARGET, "public void absent()", "absent", "java")
     assert not found.found and not found.has_method
@@ -132,6 +141,7 @@ def test_no_counterpart_is_reported_rather_than_invented():
     assert found.diagnostics is not None and "no method corresponding" in found.diagnostics
 
 
+@requires_parser
 def test_a_method_body_is_recovered_whole_not_as_a_region():
     found = locate_method(TARGET, "public int size(String)", "size", "java")
     body = found.method_source or ""
@@ -142,6 +152,7 @@ def test_a_method_body_is_recovered_whole_not_as_a_region():
 
 
 # --- regions with no enclosing function ---------------------------------------
+@requires_parser
 def test_an_import_region_still_has_file_level_structure():
     ctx = file_context(TARGET, "java")
     assert ctx.found and not ctx.has_method
@@ -264,12 +275,14 @@ def _target_for(edits_before: bool, edits_after: bool):
     return _target_context(ctxs, files, "java")
 
 
+@requires_parser
 def test_the_post_change_method_is_tried_when_the_pre_change_one_is_not_in_the_fork():
     target, matched = _target_for(edits_before=True, edits_after=True)
     assert target.method_name == "handleLostAll"
     assert matched is not None and matched.method_name == "handleLostAll"
 
 
+@requires_parser
 def test_a_side_that_only_marks_where_lines_went_is_never_matched():
     """With nothing added, the post-change method only neighbours the change."""
     target, matched = _target_for(edits_before=True, edits_after=False)
@@ -277,6 +290,7 @@ def test_a_side_that_only_marks_where_lines_went_is_never_matched():
     assert matched is None
 
 
+@requires_parser
 def test_the_pre_change_method_wins_when_both_exist_in_the_fork():
     from salp.packaging.builder import ContextContainer, _FileStates, _target_context
     from salp.structural import EditContext
@@ -314,6 +328,7 @@ def test_a_hunk_is_described_by_its_post_change_side_unless_it_only_deletes():
     assert _hunk("@@ -1,1 +1,1 @@\n-a();\n+b();\n").described_side() == "after"
 
 
+@requires_parser
 def test_a_pure_deletion_is_not_named_after_the_method_beside_it():
     """Deleting closeDirty() leaves a point next to handleLostAll() -- a neighbour."""
     from salp.packaging.builder import ContextContainer
