@@ -119,6 +119,13 @@ class TransformationUnit(BaseModel):
 
     fn_id: str
     edit_regions: list[str] = Field(default_factory=list)
+    # The hunk's own lines on each side, context included, exactly as the file
+    # holds them: what a consumer searches for when the unit is not a method.
+    region_before: str | None = None
+    region_after: str | None = None
+    # "file" when cut from the whole file at its pinned state, "diff" when
+    # rebuilt from the hunk because no file agreed with it.
+    region_cut_from: str | None = None
 
 
 class Relationship(BaseModel):

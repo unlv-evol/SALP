@@ -176,6 +176,39 @@ def test_every_target_payload_occurs_verbatim_in_the_fork_file(output):
     assert checked, "no target payload was written"
 
 
+def test_every_hunk_carries_its_region_as_an_exact_slice_of_the_file(output):
+    """Both sides of every hunk, context lines included, as the files hold them.
+
+    RCAP falls back to these when the unit is not a method on both sides, and
+    finds where to apply a change by searching for the before side's lines.
+    """
+    from salp.ingest import hunk_region, parse_hunk_header
+
+    checked = 0
+    for index_path in sorted(output.glob("*/PR-*/sap-*/hunks/*/hunk.json")):
+        index = json.loads(index_path.read_text())
+        sap_dir = index_path.parent.parent.parent
+        assert index["region_cut_from"] == "file", index_path
+        diff = (index_path.parent / "hunk.diff").read_text(encoding="utf-8")
+        header = parse_hunk_header(diff)
+        source_repo = json.loads((sap_dir.parent / "pr.json").read_text())["source_repo"]
+        source_file = json.loads((sap_dir / "sap.json").read_text())["source_file"]
+        head = (REPOS / source_repo.replace("/", "__") / source_file).read_text(encoding="utf-8")
+        exact_after = "".join(head.splitlines(keepends=True)[
+            header.new_start - 1 : header.new_start - 1 + header.new_count
+        ])
+        for side, expected in (
+            ("before", hunk_region(diff, side="before")), ("after", exact_after)
+        ):
+            region = (sap_dir / index["transformation"][f"region_{side}"]).read_text(
+                encoding="utf-8"
+            )
+            assert region == expected, f"{index_path}: region_{side}"
+            assert region.endswith("\n"), f"{index_path}: region_{side} ends mid-line"
+        checked += 1
+    assert checked, "no hunk was written"
+
+
 def test_tau_is_three_functions_not_regions_or_files(output):
     """Every member of a recovered tau must be a function body.
 

@@ -145,3 +145,67 @@ def test_an_import_region_still_has_file_level_structure():
     ctx = file_context(TARGET, "java")
     assert ctx.found and not ctx.has_method
     assert ctx.package == "org.other"
+
+
+# --- exact hunk regions -------------------------------------------------------
+_REGION_DIFF = """--- a/W.java
++++ b/W.java
+@@ -2,4 +2,4 @@ class W {
+     void a() {
+-        old();
+
++        neu();
+     }
+"""
+
+
+def test_a_hunk_region_is_the_file_text_without_header_or_markers():
+    """Blank context lines stay in place; nothing of the diff syntax survives."""
+    from salp.ingest import hunk_region
+
+    assert hunk_region(_REGION_DIFF, side="before") == "    void a() {\n        old();\n\n    }\n"
+    assert hunk_region(_REGION_DIFF, side="after") == "    void a() {\n\n        neu();\n    }\n"
+
+
+def test_the_no_newline_marker_is_not_part_of_a_region():
+    from salp.ingest import hunk_region
+
+    diff = "@@ -1,1 +1,1 @@\n-a();\n\\ No newline at end of file\n+b();\n"
+    assert hunk_region(diff, side="before") == "a();\n"
+    assert hunk_region(diff, side="after") == "b();\n"
+
+
+def test_a_pure_insertion_still_has_context_on_its_before_side():
+    """A consumer locates the insertion by the lines around it."""
+    from salp.ingest import hunk_region
+
+    diff = "@@ -1,2 +1,3 @@\n a();\n+b();\n c();\n"
+    assert hunk_region(diff, side="before") == "a();\nc();\n"
+
+
+def _regions_for(diff: str, before: str | None, after: str | None):
+    from salp.ingest import HunkArtifacts
+    from salp.packaging.builder import _FileStates, _hunk_regions, _HunkSource
+
+    source = _HunkSource(HunkArtifacts(hunk_id="H-1"), 1)
+    source.attach_diff(diff)
+    return _hunk_regions(source, _FileStates(source_before=before, source_after=after))
+
+
+_BEFORE_FILE = "class W {\r\n    void a() {\r\n        old();\r\n\r\n    }\r\n}\r\n"
+_AFTER_FILE = "class W {\r\n    void a() {\r\n\r\n        neu();\r\n    }\r\n}\r\n"
+
+
+def test_a_region_is_cut_from_the_file_with_its_own_bytes_when_they_agree():
+    before, after, cut_from = _regions_for(_REGION_DIFF, _BEFORE_FILE, _AFTER_FILE)
+    assert cut_from == "file"
+    assert before == "    void a() {\r\n        old();\r\n\r\n    }\r\n", "CRLF endings kept"
+    assert after in _AFTER_FILE
+
+
+def test_a_file_that_disagrees_with_the_diff_is_not_cut():
+    """A file pinned to the wrong state would otherwise yield a foreign region."""
+    drifted = _AFTER_FILE.replace("neu", "other")
+    before, after, cut_from = _regions_for(_REGION_DIFF, _BEFORE_FILE, drifted)
+    assert cut_from == "diff"
+    assert after == "    void a() {\n\n        neu();\n    }\n"

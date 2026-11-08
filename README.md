@@ -197,7 +197,8 @@ PR-<n>/
       ast.json  structure.json
     hunks/<hunk_id>/
       hunk.json                # INDEX SPINE: states, refs, confidence, edges
-      hunk.diff  edit_region.json  transformation.json  localization.json
+      hunk.diff  region.before.<ext>  region.after.<ext>  # verbatim hunk lines
+      edit_region.json  transformation.json  localization.json
       refactorings.json  compatibility.json  surrounding.json
       verification.json  provenance.json
 ```

@@ -257,6 +257,38 @@ def changed_spans(
         else _anchor(delete_at, hunk.new_start, hunk.new_end),
     )
 
+
+def hunk_region(
+    diff: str | None, *, side: str, header: HunkHeader | None = None
+) -> str | None:
+    """One side of a hunk as the file holds it: its lines, markers removed.
+
+    The pre-change side is the context and deleted lines, the post-change side
+    the context and added ones -- exactly the lines ``old_start``/``new_start``
+    count over. Unlike ``hunk_side`` there is no ``@@`` header and no marker
+    column, so the result is the text a consumer finds in the file when it
+    looks for the region. Every line, the last included, ends with a newline.
+
+    ``side`` is ``"before"`` or ``"after"``; ``header`` selects the hunk as in
+    ``changed_spans``.
+    """
+    found = _hunk_body(diff, header) if diff else None
+    if found is None:
+        return None
+    drop = "+" if side == "before" else "-"
+    lines: list[str] = []
+    for line in found[1].splitlines():
+        if line.startswith("\\") or line.startswith(drop):  # "\ No newline", other side
+            continue
+        if line.startswith((" ", "-", "+")):
+            lines.append(line[1:])
+        elif line == "":  # a blank context line some tools emit without its space
+            lines.append("")
+        else:  # past the end of this hunk's body
+            break
+    return "".join(f"{line}\n" for line in lines) if lines else None
+
+
 def revert_patch(after_text: str | None, patch: str | None) -> str | None:
     """Reconstruct the pre-change file from the post-change file and its diff.
 

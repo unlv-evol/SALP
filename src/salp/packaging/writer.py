@@ -19,6 +19,8 @@ Directory grammar (per SAP spec, file-scoped MO minting)::
             hunks/<hunk_id>/
                 hunk.json                   # INDEX SPINE
                 hunk.diff
+                region.before.<ext>         # the hunk's lines, context included,
+                region.after.<ext>          #   verbatim from each file
                 edit_region.json
                 transformation.json
                 localization.json
@@ -159,6 +161,8 @@ def hunk_index(sap: SAP, hunk_id: str) -> dict[str, object]:
             "f_s_after": fn.source_after_ref if fn.has_source_after else None,
             "f_t": fn.target_ref if fn.has_target else None,
         }
+    unit = hunk.transformation
+    transformation |= {"region_before": unit.region_before, "region_after": unit.region_after}
 
     return {
         "hunk_id": hunk.hunk_id,
@@ -167,6 +171,8 @@ def hunk_index(sap: SAP, hunk_id: str) -> dict[str, object]:
         "change_type": sap.change_type.value,
         "schema_version": sap.schema_version,
         "transformation": transformation,
+        # Kept out of `transformation`, whose strings are all payload references.
+        "region_cut_from": unit.region_cut_from,
         "evidence": evidence,
         "relationships": [
             {"from": r.src, "rel": r.rel, "to": r.dst, "state": r.state, "evidence": r.evidence}

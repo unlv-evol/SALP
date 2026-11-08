@@ -15,6 +15,7 @@ from salp.ingest import (
     HunkArtifacts,
     HunkHeader,
     changed_spans,
+    hunk_region,
     hunk_side,
     parse_hunk_header,
     revert_patch,
@@ -450,6 +451,46 @@ def _build_function_pool(
     return assigned
 
 
+def _file_lines(text: str | None, start: int, count: int) -> list[str] | None:
+    """Lines ``start .. start + count - 1`` (1-based) of a file, terminators kept."""
+    if text is None or count < 1 or start < 1:
+        return None
+    lines = text.splitlines(keepends=True)
+    return lines[start - 1 : start - 1 + count] if start - 1 + count <= len(lines) else None
+
+
+def _hunk_regions(
+    source: _HunkSource, files: _FileStates
+) -> tuple[str | None, str | None, str | None]:
+    """Both sides of a hunk as the files hold them, and what they were cut from.
+
+    Each side is the hunk's ``@@`` range -- its context lines included, so a
+    consumer always has something to find, even before a pure insertion. It is
+    cut from the whole file when both files agree with the diff line for line,
+    keeping the file's own bytes, and rebuilt from the diff otherwise, so a
+    file pinned to the wrong state cannot yield a plausible but foreign region.
+
+    Returns ``(before, after, cut_from)``, with ``cut_from`` "file" or "diff".
+    """
+    h = source.header
+    if h is None:
+        return None, None, None
+    from_diff = [hunk_region(source.diff, side=s, header=h) for s in ("before", "after")]
+    from_file = [
+        _file_lines(files.source_before, h.old_start, h.old_count),
+        _file_lines(files.source_after, h.new_start, h.new_count),
+    ]
+    if all(
+        lines is not None and rebuilt is not None
+        and [line.rstrip("\r\n") for line in lines] == rebuilt.splitlines()
+        for lines, rebuilt in zip(from_file, from_diff, strict=True)
+    ):
+        return "".join(from_file[0] or []), "".join(from_file[1] or []), "file"
+    if any(side is not None for side in from_diff):
+        return from_diff[0], from_diff[1], "diff"
+    return None, None, None
+
+
 def _patch_slices(gf: GACPDFile, sources: list[_HunkSource]) -> dict[str, str]:
     """Map each hunk to its own slice of the whole-file patch.
 
@@ -614,12 +655,13 @@ def build_sap(
     source_file_text = _at_pin(cache_dir, source_pin, gf.source_path)
     target_file_text = _at_pin(cache_dir, target_pin, gf.localization.divergent_path)
 
-    fn_ids = _build_function_pool(sap, sources, file_stem, ext, _FileStates(
+    files = _FileStates(
         source_after=source_file_text,
         source_before=revert_patch(source_file_text, _read(gf.patch)),
         target=target_file_text,
         target_whole=target_file_text or _read(gf.target_file),
-    ))
+    )
+    fn_ids = _build_function_pool(sap, sources, file_stem, ext, files)
 
     context_names = [c.display_name for c in (pr.context_files if pr else [])]
     hunk_order = [s.hunk_id for s in sources]
@@ -646,6 +688,11 @@ def build_sap(
         hunk_dir = f"hunks/{source.hunk_id}"
         if (diff := source.diff) is not None:
             sap.add_payload(f"{hunk_dir}/hunk.diff", diff)
+        region_before, region_after, region_cut_from = _hunk_regions(source, files)
+        if region_before is not None:
+            region_before = sap.add_payload(f"{hunk_dir}/region.before.{ext}", region_before)
+        if region_after is not None:
+            region_after = sap.add_payload(f"{hunk_dir}/region.after.{ext}", region_after)
 
         ctx = AnalysisContext(
             hunk_id=source.hunk_id,
@@ -709,7 +756,9 @@ def build_sap(
             Hunk(
                 hunk_id=source.hunk_id,
                 transformation=TransformationUnit(
-                    fn_id=fn_id, edit_regions=[f"{source.hunk_id}:ER-1"]
+                    fn_id=fn_id, edit_regions=[f"{source.hunk_id}:ER-1"],
+                    region_before=region_before, region_after=region_after,
+                    region_cut_from=region_cut_from,
                 ),
                 categories=categories,
                 relationships=_relationships(source.hunk_id, fn_id, categories),
