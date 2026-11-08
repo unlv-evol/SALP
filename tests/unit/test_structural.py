@@ -226,7 +226,8 @@ def _structural(function):
 
     ce = StructuralAnalyzer().investigate(AnalysisContext(
         hunk_id="H-1", fn_id="Widget_count", source_file="Widget.java", ext="java",
-        source_file_text=_RENAMED, target_file_text=_DIVERGED, edit_span=(4, 4),
+        source_file_text=_RENAMED, target_file_text=_DIVERGED,
+        edit_span=(4, 4), edit_text=_RENAMED,
         function=function,
     ))
     return next(e for e in ce.elements if e.object_type.endswith("target_structure"))

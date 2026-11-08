@@ -296,3 +296,34 @@ def test_edited_sides_reads_which_sides_a_hunk_changes():
     assert edited_sides("@@ -1,1 +1,2 @@\n a();\n+b();\n") == (False, True)
     assert edited_sides("@@ -1,1 +1,1 @@\n-a();\n+b();\n") == (True, True)
     assert edited_sides(None) == (True, True), "unknown is not evidence of no edit"
+
+
+# --- which side describes a hunk ------------------------------------------------
+def _hunk(diff: str):
+    from salp.ingest import HunkArtifacts
+    from salp.packaging.builder import _HunkSource
+
+    source = _HunkSource(HunkArtifacts(hunk_id="H-1"), 1)
+    source.attach_diff(diff)
+    return source
+
+
+def test_a_hunk_is_described_by_its_post_change_side_unless_it_only_deletes():
+    assert _hunk("@@ -1,2 +1,1 @@\n a();\n-b();\n").described_side() == "before"
+    assert _hunk("@@ -1,1 +1,2 @@\n a();\n+b();\n").described_side() == "after"
+    assert _hunk("@@ -1,1 +1,1 @@\n-a();\n+b();\n").described_side() == "after"
+
+
+def test_a_pure_deletion_is_not_named_after_the_method_beside_it():
+    """Deleting closeDirty() leaves a point next to handleLostAll() -- a neighbour."""
+    from salp.packaging.builder import ContextContainer
+    from salp.structural import EditContext
+
+    ctxs = ContextContainer(
+        locate(_FOLDED_BEFORE, 8, 8, "java"),  # in closeDirty(), the deleted method
+        locate(_FOLDED_AFTER, 4, 4, "java"),   # the point it left, in handleLostAll()
+        EditContext(),
+        edits_before=True,
+        edits_after=False,
+    )
+    assert [side.method_name for side in ctxs.described] == ["closeDirty"]

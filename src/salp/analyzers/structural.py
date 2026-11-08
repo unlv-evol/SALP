@@ -93,7 +93,7 @@ class StructuralAnalyzer(Analyzer):
             return self.unavailable(ctx, diagnostic_for(ctx.ext))
 
         spans = ctx.extras.get("edit_region") or {}
-        source_ctx = self._locate(ctx.source_file_text, ctx.edit_span, ctx.ext)
+        source_ctx = self._locate(ctx.edit_text, ctx.edit_span, ctx.ext)
         # The target is found by *correspondence*, never by the source's line
         # span: a diverged variant has drifted in position, so those line numbers
         # land on whatever happens to occupy them. On the bitcoinj sample that
@@ -105,7 +105,7 @@ class StructuralAnalyzer(Analyzer):
         ast: dict[str, object] = {}
 
         if source_ctx is not None and source_ctx.found:
-            ast["source"] = _method_ast(source_ctx, ctx.source_file_text or "")
+            ast["source"] = _method_ast(source_ctx, ctx.edit_text or "")
             d.present(
                 "source_structure",
                 {"payload_ref": ast_ref, "class": source_ctx.class_name,
@@ -237,13 +237,13 @@ class SurroundingAnalyzer(Analyzer):
 
         # Only parse what an installed grammar actually covers: running one
         # language's grammar over another yields an error tree, not evidence.
-        if grammar_for(ctx.ext) is None or not (ctx.source_file_text and ctx.edit_span):
+        if grammar_for(ctx.ext) is None or not (ctx.edit_text and ctx.edit_span):
             return d.build()
 
-        located = locate(ctx.source_file_text, *ctx.edit_span, ctx.ext)
+        located = locate(ctx.edit_text, *ctx.edit_span, ctx.ext)
         if not located.found:
             return d.build()
-        meta = describe(located, ctx.source_file_text)
+        meta = describe(located, ctx.edit_text)
 
         if meta.enclosing_class is not None:
             d.present(

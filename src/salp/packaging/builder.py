@@ -95,6 +95,15 @@ class _HunkSource:
             self.after
         )
 
+    def described_side(self) -> str:
+        """The side whose lines say what this hunk changes.
+
+        The post-change side, unless the hunk only deletes: then that side is
+        just the point the lines left, and what encloses it is a neighbour.
+        """
+        deletes, adds = edited_sides(self.diff, header=self.header)
+        return "before" if deletes and not adds else "after"
+
     def edit_span(self, side: str) -> tuple[int, int] | None:
         """The range to locate this hunk's enclosing function from.
 
@@ -270,6 +279,17 @@ class ContextContainer:
         """The source side the target corresponds to."""
         return self.matched or self.anchor
 
+    @property
+    def described(self) -> list[EditContext]:
+        """The sides that say what the hunk changes, post-change first.
+
+        Only sides the hunk changes lines on: the other side of a one-sided hunk
+        is the point the lines left or arrived at, so naming an entry after what
+        encloses it names a neighbour of the change.
+        """
+        candidates = ((self.src_after, self.edits_after), (self.src_before, self.edits_before))
+        return [side for side, edited in candidates if edited] or [self.src_after, self.src_before]
+
 
 def _enclosing_function(
     text: str | None, span: tuple[int, int] | None, ext: str
@@ -437,7 +457,7 @@ def _build_function_pool(
             assigned[source.hunk_id] = fn_id
             continue
 
-        name = _context_name(ctxs.src_after) or _context_name(ctxs.src_before)
+        name = next(filter(None, map(_context_name, ctxs.described)), None)
         fn_id = f"{file_stem}_{_slug(name)}" if name else f"{file_stem}_fn{source.index}"
         while fn_id in sap.functions:  # distinct units sharing a name stay distinct
             fn_id = f"{fn_id}_{source.index}"
@@ -445,8 +465,8 @@ def _build_function_pool(
         fn = FunctionPayload(
             fn_id=fn_id,
             ext=ext,
-            signature=ctxs.src_after.method_signature or ctxs.src_before.method_signature,
-            method_name=ctxs.src_after.method_name or ctxs.src_before.method_name,
+            signature=next((s.method_signature for s in ctxs.described if s.has_method), None),
+            method_name=next((s.method_name for s in ctxs.described if s.has_method), None),
             match_signature=ctxs.match_source.method_signature,
             match_method_name=ctxs.match_source.method_name,
         )
@@ -752,7 +772,11 @@ def build_sap(
             gacpd_dir=str(gf.file_dir),
             source_file_text=source_file_text,
             target_file_text=target_file_text,
-            edit_span=source.edit_span("after"),
+            edit_span=source.edit_span(source.described_side()),
+            edit_text=(
+                files.source_before if source.described_side() == "before"
+                else files.source_after
+            ),
             function=sap.functions.get(fn_id),
             extras={
                 "context_files": context_names,
