@@ -91,3 +91,10 @@ python_version = "3.11"
 strict = true
 mypy_path = "src"
 packages = ["salp"]
+
+# The `structural` extra is optional: SALP runs without it, recording the
+# analyses it cannot do as UNAVAILABLE. Type-check the same way -- its bundled
+# stubs are used when installed, and its absence is not an error.
+[[tool.mypy.overrides]]
+module = ["tree_sitter", "tree_sitter.*"]
+ignore_missing_imports = true

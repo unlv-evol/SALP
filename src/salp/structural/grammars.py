@@ -264,4 +264,7 @@ def query(node: Any, pattern: str, grammar: Grammar | None) -> dict[str, list[An
     language = _language(grammar.module)
     if language is None:
         return {}
-    return QueryCursor(Query(language, pattern)).captures(node)
+    # Annotated so the return stays typed when tree-sitter, and with it the
+    # stubs that type `captures`, is not installed.
+    captures: dict[str, list[Any]] = QueryCursor(Query(language, pattern)).captures(node)
+    return captures
